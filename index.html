@@ -1,0 +1,1799 @@
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema POS - Punto de Venta</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .notification-enter {
+            opacity: 0;
+            transform: translateY(50px) scale(0.3);
+        }
+        
+        .notification-enter-active {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            transition: all 0.3s ease;
+        }
+        
+        .notification-exit {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+        
+        .notification-exit-active {
+            opacity: 0;
+            transform: translateY(20px) scale(0.5);
+            transition: all 0.3s ease;
+        }
+        
+        .modal-backdrop {
+            backdrop-filter: blur(4px);
+        }
+        
+        .cart-item {
+            transition: all 0.2s ease;
+        }
+        
+        .cart-item:hover {
+            transform: translateX(4px);
+        }
+        
+        .package-card {
+            transition: all 0.2s ease;
+        }
+        
+        .package-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1d4ed8, #1e40af);
+            transform: translateY(-1px);
+        }
+        
+        .stats-card {
+            background: linear-gradient(135deg, #1f2937, #374151);
+            border: 1px solid #4b5563;
+        }
+        .payment-method-btn.selected {
+            background-color: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        .sales-slider-bar {
+            transition: width 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div id="app" class="flex flex-col lg:flex-row">
+        <!-- Sidebar -->
+        <div class="w-full lg:w-80 bg-gray-800 border-b lg:border-b-0 lg:border-r border-gray-700 flex flex-col">
+            <!-- Header -->
+            <div class="p-6 border-b border-gray-700">
+                <h1 class="text-2xl font-bold text-blue-400">🍗 POS System</h1>
+                <p class="text-gray-400 text-sm mt-1">Sistema de Punto de Venta</p>
+            </div>
+            
+            <!-- Stats -->
+            <div class="p-4 space-y-3">
+                <div class="stats-card p-3 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-400">Inventario</span>
+                        <span class="text-lg font-bold text-green-400" id="inventory-count">150</span>
+                    </div>
+                </div>
+                <div class="stats-card p-3 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-400">Costo por pieza</span>
+                        <span class="text-lg font-bold text-yellow-400">$<span id="cost-per-piece">2.50</span></span>
+                    </div>
+                </div>
+                <div class="stats-card p-3 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-400">Caja inicial</span>
+                        <span class="text-lg font-bold text-blue-400">$<span id="initial-cash">0.00</span></span>
+                    </div>
+                </div>
+                <div class="stats-card p-3 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-400">Ventas del día</span>
+                        <span class="text-lg font-bold text-green-400">$<span id="daily-sales">0.00</span></span>
+                    </div>
+                </div>
+                <div class="stats-card p-3 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-400">Retiros</span>
+                        <span class="text-lg font-bold text-red-400">$<span id="total-withdrawals">0.00</span></span>
+                    </div>
+                </div>
+                <div class="stats-card p-3 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-400">Gastos operativos</span>
+                        <span class="text-lg font-bold text-orange-400">$<span id="total-expenses">0.00</span></span>
+                    </div>
+                </div>
+                <div class="stats-card p-3 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-400">Caja actual</span>
+                        <span class="text-lg font-bold text-purple-400">$<span id="current-cash">0.00</span></span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cart -->
+            <div class="flex-1 flex flex-col p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold">🛒 Carrito</h2>
+                    <button id="clear-cart" class="text-red-400 hover:text-red-300 p-1 rounded" title="Limpiar Carrito">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <div id="cart-items" class="flex-1 space-y-2 overflow-y-auto max-h-96 lg:max-h-full">
+                    <div class="text-center text-gray-500 py-8">
+                        <svg class="mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <p>Carrito vacío</p>
+                    </div>
+                </div>
+                
+                <!-- Cart Total -->
+                <div class="border-t border-gray-700 pt-4 mt-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-gray-400">Subtotal:</span>
+                        <span class="font-semibold">$<span id="cart-subtotal">0.00</span></span>
+                    </div>
+                    <div id="shipping-section" class="flex justify-between items-center mb-2">
+                        <span class="text-gray-400">Envío:</span>
+                        <span class="font-semibold" id="shipping-cost">$0.00</span>
+                    </div>
+                    <div id="shipping-message" class="text-xs text-center mb-3 p-2 rounded-lg hidden">
+                        <!-- Shipping message will be inserted here -->
+                    </div>
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-lg font-bold">Total:</span>
+                        <span class="text-xl font-bold text-green-400">$<span id="cart-total">0.00</span></span>
+                    </div>
+                    <button id="checkout-btn" class="w-full btn-primary text-white py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        💳 Procesar Venta
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col h-screen">
+            <!-- Top Bar -->
+            <div class="bg-gray-800 border-b border-gray-700 p-4">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <h2 class="text-xl font-semibold">Productos Disponibles</h2>
+                    <div class="flex space-x-2">
+                        <button id="settings-btn" class="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-gray-700" title="Configuración">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                        </button>
+                        <button id="withdrawals-btn" class="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-gray-700" title="Retiros">
+                           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                        </button>
+                         <button id="expenses-btn" class="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-gray-700" title="Gastos Operativos">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                        </button>
+                        <button id="history-btn" class="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-gray-700" title="Historial de Ventas">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </button>
+                        <button id="cash-register-btn" class="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-gray-700" title="Corte de Caja">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Products Grid -->
+            <div class="flex-1 p-6 overflow-y-auto">
+                <div id="products-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <!-- Products will be rendered here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notifications Container -->
+    <div id="notifications" class="fixed top-4 right-4 z-50 space-y-2"></div>
+    
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-70 modal-backdrop hidden items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center">
+                <h3 class="text-xl font-bold">⚙️ Configuración</h3>
+                <button id="close-settings" class="text-gray-400 hover:text-white">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-4 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Inventario inicial</label>
+                    <input id="inventory-input" type="number" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white" value="150">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Costo por pieza ($)</label>
+                    <input id="cost-input" type="number" step="0.01" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white" value="2.50">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Caja inicial ($)</label>
+                    <input id="cash-input" type="number" step="0.01" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white" value="0">
+                </div>
+                <button id="save-settings" class="w-full btn-primary text-white py-2 rounded-lg font-semibold">
+                    💾 Guardar Configuración
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Withdrawals Modal -->
+    <div id="withdrawals-modal" class="fixed inset-0 bg-black bg-opacity-70 modal-backdrop hidden items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center flex-shrink-0">
+                <h3 class="text-xl font-bold">💰 Retiros de Caja</h3>
+                <button id="close-withdrawals" class="text-gray-400 hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-4 space-y-4 overflow-y-auto">
+                <div class="bg-gray-700 p-4 rounded-lg">
+                    <div class="flex justify-between items-center mb-2">
+                        <span>Caja disponible:</span>
+                        <span class="text-xl font-bold text-green-400">$<span id="available-cash">0.00</span></span>
+                    </div>
+                </div>
+                
+                <!-- Recommendations Section -->
+                <div class="bg-blue-900 bg-opacity-50 p-4 rounded-lg">
+                    <h4 class="font-semibold mb-3 text-blue-300">💡 Recomendaciones de Retiro</h4>
+                    <div class="space-y-3">
+                        <div class="bg-blue-800 bg-opacity-50 p-3 rounded-lg">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm text-blue-200">💰 Ganancias disponibles:</span>
+                                <span class="font-bold text-green-400">$<span id="available-profit">0.00</span></span>
+                            </div>
+                            <p class="text-xs text-blue-300">Puedes retirar sin afectar operaciones</p>
+                        </div>
+                        <div class="bg-yellow-800 bg-opacity-50 p-3 rounded-lg">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm text-yellow-200">📦 Para inventario:</span>
+                                <span class="font-bold text-yellow-400">$<span id="inventory-needed">0.00</span></span>
+                            </div>
+                            <p class="text-xs text-yellow-300">Recomendado para <span id="pieces-to-buy">0</span> piezas</p>
+                        </div>
+                        <div class="bg-purple-800 bg-opacity-50 p-3 rounded-lg">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-sm text-purple-200">🏦 Mantener en caja:</span>
+                                <span class="font-bold text-purple-400">$<span id="keep-in-cash">0.00</span></span>
+                            </div>
+                            <p class="text-xs text-purple-300">Para operaciones del día siguiente</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Withdrawal History -->
+                <div class="border-t border-gray-700 pt-4">
+                    <h4 class="font-semibold mb-2">Retiros del día</h4>
+                    <div id="withdrawal-history" class="space-y-2 max-h-40 overflow-y-auto">
+                        <div class="text-center text-gray-500 py-4">
+                            <p class="text-sm">No hay retiros registrados</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-gray-700 space-y-4 flex-shrink-0">
+                 <div>
+                    <label class="block text-sm font-medium mb-2">Cantidad a retirar ($)</label>
+                    <input id="withdrawal-amount" type="number" step="0.01" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="0.00">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Concepto del retiro</label>
+                    <input id="withdrawal-concept" type="text" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="Ej: Gastos operativos, Ganancias, etc.">
+                </div>
+                <button id="process-withdrawal" class="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-semibold disabled:opacity-50" disabled>
+                    💸 Procesar Retiro
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Quantity Modal -->
+    <div id="custom-quantity-modal" class="fixed inset-0 bg-black bg-opacity-70 modal-backdrop hidden items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center">
+                <h3 class="text-xl font-bold" id="custom-modal-title">📦 Seleccionar Cantidad</h3>
+                <button id="close-custom-quantity" class="text-gray-400 hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-4 space-y-4">
+                <div class="bg-gray-700 p-4 rounded-lg text-center">
+                    <div class="text-3xl mb-2" id="custom-modal-icon">📦</div>
+                    <h4 class="font-semibold mb-2" id="custom-modal-name">Producto</h4>
+                    <div class="text-2xl font-bold text-green-400">$<span id="custom-modal-price">0.00</span> <span class="text-sm text-gray-400">por pieza</span></div>
+                </div>
+                <p class="text-sm text-yellow-400 text-center">Inventario disponible: <span id="custom-modal-available">0</span> piezas</p>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Cantidad de piezas</label>
+                        <div class="flex items-center space-x-3">
+                            <button id="decrease-quantity" class="w-10 h-10 bg-gray-600 hover:bg-gray-500 rounded-lg text-xl font-bold">-</button>
+                            <input id="custom-quantity-input" type="number" min="1" value="1" class="flex-1 p-3 bg-gray-700 border border-gray-600 rounded-lg text-white text-center text-xl font-bold">
+                            <button id="increase-quantity" class="w-10 h-10 bg-gray-600 hover:bg-gray-500 rounded-lg text-xl font-bold">+</button>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-blue-900 bg-opacity-50 p-4 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <span class="text-blue-300">Total a pagar:</span>
+                            <span class="text-2xl font-bold text-blue-400">$<span id="custom-total-price">0.00</span></span>
+                        </div>
+                    </div>
+                    
+                    <button id="add-custom-to-cart" class="w-full btn-primary text-white py-3 rounded-lg font-semibold text-lg">
+                        🛒 Agregar al Carrito
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expenses Modal -->
+    <div id="expenses-modal" class="fixed inset-0 bg-black bg-opacity-70 modal-backdrop hidden items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center flex-shrink-0">
+                <h3 class="text-xl font-bold">💼 Gastos Operativos</h3>
+                <button id="close-expenses" class="text-gray-400 hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-4 space-y-4 overflow-y-auto">
+                <!-- Quick Expense Categories -->
+                <div class="bg-gray-700 p-4 rounded-lg">
+                    <h4 class="font-semibold mb-3 text-gray-300">⚡ Gastos Rápidos</h4>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="addQuickExpense('Gas', 50)" class="bg-blue-600 hover:bg-blue-700 p-2 rounded text-sm">🔥 Gas ($50)</button>
+                        <button onclick="addQuickExpense('Luz', 30)" class="bg-yellow-600 hover:bg-yellow-700 p-2 rounded text-sm">💡 Luz ($30)</button>
+                        <button onclick="addQuickExpense('Carbón', 80)" class="bg-gray-600 hover:bg-gray-700 p-2 rounded text-sm">⚫ Carbón ($80)</button>
+                        <button onclick="addQuickExpense('Limpieza', 25)" class="bg-green-600 hover:bg-green-700 p-2 rounded text-sm">🧽 Limpieza ($25)</button>
+                        <button onclick="addQuickExpense('Aceite', 120)" class="bg-orange-600 hover:bg-orange-700 p-2 rounded text-sm">🛢️ Aceite ($120)</button>
+                        <button onclick="addQuickExpense('Condimentos', 60)" class="bg-red-600 hover:bg-red-700 p-2 rounded text-sm">🧂 Condimentos ($60)</button>
+                    </div>
+                </div>
+                
+                <!-- Expense History -->
+                <div class="border-t border-gray-700 pt-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h4 class="font-semibold">Gastos del día</h4>
+                        <span class="text-lg font-bold text-orange-400">$<span id="daily-expenses-total">0.00</span></span>
+                    </div>
+                    <div id="expense-history" class="space-y-2 max-h-40 overflow-y-auto">
+                        <div class="text-center text-gray-500 py-4">
+                            <p class="text-sm">No hay gastos registrados</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Auto-replenishment Section -->
+                <div class="bg-green-900 bg-opacity-50 p-4 rounded-lg">
+                    <h4 class="font-semibold mb-3 text-green-300">🔄 Reposición Automática</h4>
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-green-200">Inventario actual:</span>
+                            <span class="font-bold text-green-400"><span id="current-inventory-display">150</span> piezas</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-green-200">Nivel mínimo:</span>
+                            <span class="font-bold text-yellow-400">50 piezas</span>
+                        </div>
+                        <div id="replenishment-alert" class="hidden bg-red-800 p-2 rounded text-sm text-red-200">
+                            ⚠️ Inventario bajo. Se recomienda reponer.
+                        </div>
+                        <button id="auto-replenish" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-semibold">
+                            🛒 Reponer Inventario (100 piezas)
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-gray-700 space-y-3 flex-shrink-0">
+                <h4 class="font-semibold text-gray-300">📝 Gasto Personalizado</h4>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Concepto del gasto</label>
+                    <input id="expense-concept" type="text" class="w-full p-2 bg-gray-600 border border-gray-500 rounded-lg text-white" placeholder="Ej: Compra de ingredientes">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Cantidad ($)</label>
+                    <input id="expense-amount" type="number" step="0.01" class="w-full p-2 bg-gray-600 border border-gray-500 rounded-lg text-white" placeholder="0.00">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Categoría</label>
+                    <select id="expense-category" class="w-full p-2 bg-gray-600 border border-gray-500 rounded-lg text-white">
+                        <option value="Ingredientes">🥘 Ingredientes</option>
+                        <option value="Combustible">🔥 Combustible</option>
+                        <option value="Servicios">💡 Servicios</option>
+                        <option value="Limpieza">🧽 Limpieza</option>
+                        <option value="Mantenimiento">🔧 Mantenimiento</option>
+                        <option value="Otros">📦 Otros</option>
+                    </select>
+                </div>
+                <button id="add-custom-expense" class="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg font-semibold disabled:opacity-50" disabled>
+                    💰 Registrar Gasto
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cash Register Modal -->
+    <div id="cash-register-modal" class="fixed inset-0 bg-black bg-opacity-70 modal-backdrop hidden items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center flex-shrink-0">
+                <h3 class="text-xl font-bold">📊 Corte de Caja</h3>
+                <button id="close-cash-register" class="text-gray-400 hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-4 space-y-4 overflow-y-auto">
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-blue-900 bg-opacity-50 p-4 rounded-lg">
+                        <h4 class="text-sm text-blue-300 mb-1">Caja Inicial</h4>
+                        <p class="text-2xl font-bold text-blue-400">$<span id="register-initial-cash">0.00</span></p>
+                    </div>
+                    <div class="bg-purple-900 bg-opacity-50 p-4 rounded-lg">
+                        <h4 class="text-sm text-purple-300 mb-1">Caja Final Esperada</h4>
+                        <p class="text-2xl font-bold text-purple-400">$<span id="register-final-cash">0.00</span></p>
+                    </div>
+                </div>
+
+                <!-- Sales Breakdown -->
+                <div class="bg-gray-700 p-4 rounded-lg">
+                    <h4 class="font-semibold mb-3">💰 Resumen de Ingresos</h4>
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Ventas en Efectivo:</span>
+                            <span class="font-semibold text-green-400">$<span id="register-cash-sales">0.00</span></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Ventas por Transferencia:</span>
+                            <span class="font-semibold text-blue-400">$<span id="register-transfer-sales">0.00</span></span>
+                        </div>
+                        <div class="border-t border-gray-600 pt-2 mt-2 flex justify-between">
+                            <span class="font-bold">Ventas Totales:</span>
+                            <span class="font-bold text-lg">$<span id="register-total-sales">0.00</span></span>
+                        </div>
+                    </div>
+                    <!-- Sales Slider -->
+                    <div class="mt-4">
+                        <div class="w-full bg-gray-600 rounded-full h-4 flex overflow-hidden">
+                            <div id="cash-slider-bar" class="sales-slider-bar bg-green-500 h-4 rounded-l-full"></div>
+                            <div id="transfer-slider-bar" class="sales-slider-bar bg-blue-500 h-4 rounded-r-full"></div>
+                        </div>
+                        <div class="flex justify-between text-xs mt-1">
+                            <span id="cash-slider-label" class="text-green-400"></span>
+                            <span id="transfer-slider-label" class="text-blue-400"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Profit Analysis -->
+                <div class="bg-gray-700 p-4 rounded-lg">
+                    <h4 class="font-semibold mb-3">📈 Análisis de Ganancias</h4>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-400">Ingresos brutos:</span>
+                            <p class="font-bold text-green-400">$<span id="gross-income">0.00</span></p>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-400">Costo de Inversión (Producto):</span>
+                            <p class="font-bold text-red-400">$<span id="product-costs">0.00</span></p>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-400">Gastos Operativos:</span>
+                            <p class="font-bold text-orange-400">$<span id="operational-expenses">0.00</span></p>
+                        </div>
+                        <div class="border-t border-gray-600 pt-2 mt-2 flex justify-between">
+                            <span class="text-sm font-bold">Ganancia neta:</span>
+                            <p class="text-lg font-bold text-yellow-400">$<span id="net-profit">0.00</span></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sales Summary -->
+                <div class="bg-gray-700 p-4 rounded-lg">
+                    <h4 class="font-semibold mb-3">🛒 Resumen de Ventas</h4>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Total de transacciones:</span>
+                            <span class="font-semibold" id="total-transactions">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Piezas vendidas:</span>
+                            <span class="font-semibold" id="total-pieces-sold">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Ticket promedio:</span>
+                            <span class="font-semibold">$<span id="average-ticket">0.00</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-gray-700 flex space-x-2 flex-shrink-0">
+                <button id="print-register" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold">
+                    🖨️ Imprimir Corte
+                </button>
+                <button id="close-day" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-semibold">
+                    🔒 Cerrar Día
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Checkout Modal -->
+    <div id="checkout-modal" class="fixed inset-0 bg-black bg-opacity-70 modal-backdrop hidden items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center">
+                <h3 class="text-xl font-bold">💳 Procesar Venta</h3>
+                <button id="close-checkout" class="text-gray-400 hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-4 space-y-4">
+                <div class="bg-gray-700 p-4 rounded-lg space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-lg font-bold">Total a pagar:</span>
+                        <span class="text-xl font-bold text-green-400">$<span id="checkout-total">0.00</span></span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Método de Pago</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="payment-cash" class="payment-method-btn w-full p-2 border border-gray-600 rounded-lg selected">💵 Efectivo</button>
+                        <button id="payment-transfer" class="payment-method-btn w-full p-2 border border-gray-600 rounded-lg">💳 Transferencia</button>
+                    </div>
+                </div>
+                <div id="cash-payment-section">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Efectivo recibido ($)</label>
+                        <input id="cash-received" type="number" step="0.01" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white" placeholder="0.00">
+                    </div>
+                    <div id="change-display" class="bg-blue-900 bg-opacity-50 p-4 rounded-lg hidden mt-4">
+                        <div class="flex justify-between items-center">
+                            <span>Cambio:</span>
+                            <span class="text-xl font-bold text-blue-400">$<span id="change-amount">0.00</span></span>
+                        </div>
+                    </div>
+                </div>
+                <button id="complete-sale" class="w-full btn-primary text-white py-2 rounded-lg font-semibold disabled:opacity-50" disabled>
+                    ✅ Completar Venta
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sales History Modal -->
+    <div id="history-modal" class="fixed inset-0 bg-black bg-opacity-70 modal-backdrop hidden items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl">
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center">
+                <h3 class="text-xl font-bold">📜 Historial de Ventas del Día</h3>
+                <button id="close-history" class="text-gray-400 hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="sales-history-content" class="p-4 space-y-3 max-h-[70vh] overflow-y-auto">
+                <!-- Sales history will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Sale Detail Modal -->
+    <div id="sale-detail-modal" class="fixed inset-0 bg-black bg-opacity-70 modal-backdrop hidden items-center justify-center z-[60] p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center">
+                <h3 class="text-xl font-bold">📄 Detalle de Venta</h3>
+                <button id="close-sale-detail" class="text-gray-400 hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="sale-detail-content" class="p-4">
+                <!-- Sale detail will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // Application State
+        let state = {
+            cart: [],
+            inventory: 150,
+            costPerPiece: 2.50,
+            initialCash: 0,
+            sales: [],
+            withdrawals: [],
+            expenses: [],
+            dailySales: 0,
+            totalWithdrawals: 0,
+            totalExpenses: 0
+        };
+
+        // Checkout State
+        let selectedPaymentMethod = 'cash';
+
+        // Package Types Data
+        const packageTypes = [
+            { id: 1, name: 'Paquete Personal', pieces: 8, price: 85, icon: '👤' },
+            { id: 2, name: 'Paquete Dúo', pieces: 14, price: 135, icon: '👥' },
+            { id: 3, name: 'Paquete Amigos', pieces: 25, price: 235, icon: '⚡' },
+            { id: 4, name: 'Paquete Familiar', pieces: 35, price: 275, icon: '🏠' },
+            { id: 5, name: '1 kg', pieces: 18, price: 190, icon: '📦' },
+            { id: 6, name: '1/2 kg', pieces: 10, price: 95, icon: '📦' },
+            { id: 7, name: 'Orden', pieces: 6, price: 65, icon: '📦' },
+            { id: 8, name: 'Orden Kids', pieces: 4, price: 35, icon: '👶' },
+            { id: 9, name: 'Orden de Papas Fritas', pieces: 0, price: 45, cost: 20.00, icon: '🍟' },
+            { id: 10, name: 'Aderezo Ranch', pieces: 0, price: 20, cost: 8.00, icon: '🥗' },
+            { id: 11, name: 'Coca-Cola 600 ml', pieces: 0, price: 30, cost: 15.00, icon: '🥤' },
+            { id: 12, name: 'Manzanita 600 ml', pieces: 0, price: 30, cost: 15.00, icon: '🍎' },
+            { id: 13, name: 'Paquete Llenador (50 pzs)', pieces: 50, price: 450, icon: '⚡' },
+            { id: 14, name: '(LUNES X PIEZA)', pieces: 1, price: 6.5, icon: '📦', isCustom: true },
+            { id: 15, name: '(MARTES X PIEZA)', pieces: 1, price: 7.5, icon: '📦', isCustom: true }
+        ];
+
+        // Utility Functions
+        function formatCurrency(amount) {
+            return amount.toFixed(2);
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `p-4 rounded-lg shadow-lg text-white notification-enter ${
+                type === 'success' ? 'bg-green-600' : 
+                type === 'error' ? 'bg-red-600' : 'bg-yellow-600'
+            }`;
+            notification.textContent = message;
+            
+            document.getElementById('notifications').appendChild(notification);
+            
+            // Trigger animation
+            setTimeout(() => {
+                notification.className = notification.className.replace('notification-enter', 'notification-enter-active');
+            }, 10);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.className = notification.className.replace('notification-enter-active', 'notification-exit-active');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // Custom Quantity Modal Variables
+        let currentCustomProduct = null;
+
+        // Cart Functions
+        function addToCart(packageType, quantity = 1) {
+            const piecesAlreadyInCart = getTotalPieces();
+            const requiredPieces = (packageType.pieces || 0) * quantity;
+
+            if (packageType.pieces > 0 && (piecesAlreadyInCart + requiredPieces) > state.inventory) {
+                showNotification(`Inventario insuficiente. Solo quedan ${state.inventory - piecesAlreadyInCart} piezas.`, 'error');
+                return;
+            }
+
+            const existingItem = state.cart.find(item => item.id === packageType.id && item.price === packageType.price);
+            
+            if (existingItem) {
+                existingItem.quantity += quantity;
+            } else {
+                state.cart.push({
+                    ...packageType,
+                    quantity: quantity
+                });
+            }
+            
+            updateCartDisplay();
+            updateStatsDisplay();
+            showNotification(`${packageType.name} agregado al carrito`);
+            updateProductGridAvailability();
+        }
+
+        function openCustomQuantityModal(packageType) {
+            currentCustomProduct = packageType;
+            const piecesAlreadyInCart = getTotalPieces();
+            const availableNow = state.inventory - piecesAlreadyInCart;
+            
+            // Update modal content
+            document.getElementById('custom-modal-icon').textContent = packageType.icon;
+            document.getElementById('custom-modal-name').textContent = packageType.name;
+            document.getElementById('custom-modal-price').textContent = formatCurrency(packageType.price);
+            document.getElementById('custom-quantity-input').value = 1;
+            document.getElementById('custom-quantity-input').max = availableNow;
+            document.getElementById('custom-modal-available').textContent = availableNow;
+            
+            updateCustomTotal();
+            openModal('custom-quantity-modal');
+        }
+
+        function updateCustomTotal() {
+            if (!currentCustomProduct) return;
+            
+            const input = document.getElementById('custom-quantity-input');
+            const quantity = parseInt(input.value) || 0;
+            const available = parseInt(document.getElementById('custom-modal-available').textContent);
+
+            const total = currentCustomProduct.price * quantity;
+            document.getElementById('custom-total-price').textContent = formatCurrency(total);
+            document.getElementById('add-custom-to-cart').disabled = (quantity <= 0 || quantity > available);
+        }
+
+        function addCustomToCart() {
+            if (!currentCustomProduct) return;
+            
+            const quantity = parseInt(document.getElementById('custom-quantity-input').value) || 1;
+            const piecesAlreadyInCart = getTotalPieces();
+
+            if (piecesAlreadyInCart + quantity > state.inventory) {
+                showNotification(`Inventario insuficiente. Solo quedan ${state.inventory - piecesAlreadyInCart} piezas.`, 'error');
+                return;
+            }
+            
+            const customItem = {
+                ...currentCustomProduct,
+                id: Date.now(),
+                pieces: quantity,
+                price: quantity * currentCustomProduct.price,
+                name: `${currentCustomProduct.name} (${quantity} pzs)`
+            };
+            
+            addToCart(customItem, 1);
+            closeModal('custom-quantity-modal');
+        }
+
+
+        function increaseCustomQuantity() {
+            const input = document.getElementById('custom-quantity-input');
+            const available = parseInt(document.getElementById('custom-modal-available').textContent);
+            const newValue = parseInt(input.value) + 1;
+            if (newValue <= available) {
+                input.value = newValue;
+                updateCustomTotal();
+            }
+        }
+
+        function decreaseCustomQuantity() {
+            const input = document.getElementById('custom-quantity-input');
+            const currentValue = parseInt(input.value);
+            if (currentValue > 1) {
+                input.value = currentValue - 1;
+                updateCustomTotal();
+            }
+        }
+
+        function removeFromCart(packageId) {
+            state.cart = state.cart.filter(item => item.id !== packageId);
+            updateCartDisplay();
+            updateStatsDisplay();
+            showNotification('Producto eliminado del carrito', 'warning');
+            updateProductGridAvailability();
+        }
+
+        function updateCartQuantity(packageId, newQuantity) {
+            const itemToUpdate = state.cart.find(item => item.id === packageId);
+            if (!itemToUpdate || itemToUpdate.isCustom) {
+                if(newQuantity <= 0) removeFromCart(packageId);
+                return;
+            };
+
+            if (newQuantity <= 0) {
+                removeFromCart(packageId);
+                return;
+            }
+
+            const otherItemsPieces = state.cart
+                .filter(item => item.id !== packageId)
+                .reduce((sum, item) => sum + ((item.pieces || 0) * item.quantity), 0);
+
+            const newItemPieces = (itemToUpdate.pieces || 0) * newQuantity;
+
+            if (otherItemsPieces + newItemPieces > state.inventory) {
+                showNotification('Inventario insuficiente para aumentar la cantidad.', 'error');
+                return;
+            }
+            
+            itemToUpdate.quantity = newQuantity;
+            updateCartDisplay();
+            updateStatsDisplay();
+            updateProductGridAvailability();
+        }
+
+        function clearCart() {
+            state.cart = [];
+            updateCartDisplay();
+            updateStatsDisplay();
+            showNotification('Carrito limpiado', 'warning');
+            updateProductGridAvailability();
+        }
+
+        function getCartSubtotal() {
+             return state.cart.reduce((total, item) => {
+                if (item.isCustom) {
+                    return total + item.price;
+                }
+                return total + (item.price * item.quantity);
+            }, 0);
+        }
+
+        function getShippingCost(subtotal) {
+            return subtotal < 100 ? 15 : 0;
+        }
+
+        function getCartTotal() {
+            const subtotal = getCartSubtotal();
+            const shipping = getShippingCost(subtotal);
+            return subtotal + shipping;
+        }
+
+        function getTotalPieces() {
+            return state.cart.reduce((total, item) => total + ((item.pieces || 0) * item.quantity), 0);
+        }
+
+        // Display Functions
+        function updateCartDisplay() {
+            const cartItems = document.getElementById('cart-items');
+            const cartSubtotal = document.getElementById('cart-subtotal');
+            const cartTotal = document.getElementById('cart-total');
+            const shippingCost = document.getElementById('shipping-cost');
+            const shippingMessage = document.getElementById('shipping-message');
+            const checkoutBtn = document.getElementById('checkout-btn');
+            
+            if (state.cart.length === 0) {
+                cartItems.innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <svg class="mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <p>Carrito vacío</p>
+                    </div>
+                `;
+                checkoutBtn.disabled = true;
+                shippingMessage.classList.add('hidden');
+            } else {
+                cartItems.innerHTML = state.cart.map(item => {
+                    const totalItemPrice = item.isCustom ? item.price : item.price * item.quantity;
+                    return `
+                    <div class="cart-item bg-gray-700 p-3 rounded-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-lg">${item.icon}</span>
+                                <span class="font-medium text-sm">${item.name}</span>
+                            </div>
+                            <button onclick="removeFromCart(${item.id})" class="text-red-400 hover:text-red-300">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            ${!item.isCustom ? `
+                            <div class="flex items-center space-x-2">
+                                <button onclick="updateCartQuantity(${item.id}, ${item.quantity - 1})" class="w-6 h-6 bg-gray-600 rounded text-xs hover:bg-gray-500">-</button>
+                                <span class="text-sm font-medium">${item.quantity}</span>
+                                <button onclick="updateCartQuantity(${item.id}, ${item.quantity + 1})" class="w-6 h-6 bg-gray-600 rounded text-xs hover:bg-gray-500">+</button>
+                            </div>
+                            ` : '<div></div>'}
+                            <span class="text-green-400 font-semibold">$${formatCurrency(totalItemPrice)}</span>
+                        </div>
+                        ${item.pieces > 0 && !item.isCustom ? `<div class="text-xs text-gray-400 mt-1">${(item.pieces || 0) * item.quantity} piezas</div>` : ''}
+                    </div>
+                `}).join('');
+                checkoutBtn.disabled = false;
+            }
+            
+            const subtotal = getCartSubtotal();
+            const shipping = getShippingCost(subtotal);
+            const total = subtotal + shipping;
+            
+            cartSubtotal.textContent = formatCurrency(subtotal);
+            shippingCost.textContent = formatCurrency(shipping);
+            cartTotal.textContent = formatCurrency(total);
+            
+            // Update shipping message
+            if (state.cart.length > 0) {
+                if (shipping === 0) {
+                    shippingMessage.innerHTML = '🚚 ¡Envío gratis! Pedido mayor a $100';
+                    shippingMessage.className = 'text-xs text-center mb-3 p-2 rounded-lg bg-green-900 text-green-300';
+                    shippingMessage.classList.remove('hidden');
+                } else {
+                    const remaining = 100 - subtotal;
+                    shippingMessage.innerHTML = `📦 Agrega $${formatCurrency(remaining)} más para envío gratis`;
+                    shippingMessage.className = 'text-xs text-center mb-3 p-2 rounded-lg bg-yellow-900 text-yellow-300';
+                    shippingMessage.classList.remove('hidden');
+                }
+            } else {
+                shippingMessage.classList.add('hidden');
+            }
+        }
+
+        function updateStatsDisplay() {
+            const availableInventory = state.inventory - getTotalPieces();
+            const inventoryCountElement = document.getElementById('inventory-count');
+            inventoryCountElement.textContent = availableInventory;
+
+            // Change color based on availability
+            inventoryCountElement.classList.remove('text-green-400', 'text-yellow-400', 'text-red-400');
+            if (availableInventory < 20) {
+                inventoryCountElement.classList.add('text-red-400');
+            } else if (availableInventory < 50) {
+                inventoryCountElement.classList.add('text-yellow-400');
+            } else {
+                inventoryCountElement.classList.add('text-green-400');
+            }
+
+            const cashSales = state.sales.filter(s => s.paymentMethod === 'cash').reduce((sum, s) => sum + s.total, 0);
+            const totalSales = state.sales.reduce((sum, s) => sum + s.total, 0);
+
+            document.getElementById('cost-per-piece').textContent = formatCurrency(state.costPerPiece);
+            document.getElementById('initial-cash').textContent = formatCurrency(state.initialCash);
+            document.getElementById('daily-sales').textContent = formatCurrency(totalSales);
+            document.getElementById('total-withdrawals').textContent = formatCurrency(state.totalWithdrawals);
+            document.getElementById('total-expenses').textContent = formatCurrency(state.totalExpenses);
+            
+            const currentCash = state.initialCash + cashSales - state.totalWithdrawals - state.totalExpenses;
+            document.getElementById('current-cash').textContent = formatCurrency(currentCash);
+        }
+
+        // Expense Functions
+        function addQuickExpense(concept, amount) {
+            const expense = {
+                id: Date.now(),
+                concept: concept,
+                amount: amount,
+                category: getExpenseCategory(concept),
+                timestamp: new Date().toLocaleString()
+            };
+            
+            const cashSales = state.sales.filter(s => s.paymentMethod === 'cash').reduce((sum, s) => sum + s.total, 0);
+            const currentCash = state.initialCash + cashSales - state.totalWithdrawals - state.totalExpenses;
+            
+            if (amount > currentCash) {
+                showNotification('Fondos insuficientes para este gasto', 'error');
+                return;
+            }
+            
+            state.expenses.push(expense);
+            state.totalExpenses += amount;
+            
+            updateStatsDisplay();
+            updateExpenseDisplay();
+            
+            showNotification(`Gasto de $${formatCurrency(amount)} registrado: ${concept}`);
+        }
+
+        function getExpenseCategory(concept) {
+            const categories = {
+                'Gas': 'Combustible',
+                'Luz': 'Servicios',
+                'Carbón': 'Combustible',
+                'Limpieza': 'Limpieza',
+                'Aceite': 'Ingredientes',
+                'Condimentos': 'Ingredientes'
+            };
+            return categories[concept] || 'Otros';
+        }
+
+        function addCustomExpense() {
+            const concept = document.getElementById('expense-concept').value.trim();
+            const amount = parseFloat(document.getElementById('expense-amount').value) || 0;
+            const category = document.getElementById('expense-category').value;
+            
+            if (!concept || amount <= 0) {
+                showNotification('Complete todos los campos correctamente', 'error');
+                return;
+            }
+            
+            const cashSales = state.sales.filter(s => s.paymentMethod === 'cash').reduce((sum, s) => sum + s.total, 0);
+            const currentCash = state.initialCash + cashSales - state.totalWithdrawals - state.totalExpenses;
+            
+            if (amount > currentCash) {
+                showNotification('Fondos insuficientes para este gasto', 'error');
+                return;
+            }
+            
+            const expense = {
+                id: Date.now(),
+                concept: concept,
+                amount: amount,
+                category: category,
+                timestamp: new Date().toLocaleString()
+            };
+            
+            state.expenses.push(expense);
+            state.totalExpenses += amount;
+            
+            // Clear form
+            document.getElementById('expense-concept').value = '';
+            document.getElementById('expense-amount').value = '';
+            document.getElementById('add-custom-expense').disabled = true;
+            
+            updateStatsDisplay();
+            updateExpenseDisplay();
+            
+            showNotification(`Gasto de $${formatCurrency(amount)} registrado: ${concept}`);
+        }
+
+        function updateExpenseDisplay() {
+            const historyContainer = document.getElementById('expense-history');
+            const dailyTotal = document.getElementById('daily-expenses-total');
+            const currentInventoryDisplay = document.getElementById('current-inventory-display');
+            const replenishmentAlert = document.getElementById('replenishment-alert');
+            
+            // Update daily total
+            dailyTotal.textContent = formatCurrency(state.totalExpenses);
+            
+            // Update current inventory display
+            currentInventoryDisplay.textContent = state.inventory;
+            
+            // Show/hide replenishment alert
+            if (state.inventory <= 50) {
+                replenishmentAlert.classList.remove('hidden');
+            } else {
+                replenishmentAlert.classList.add('hidden');
+            }
+            
+            // Update expense history
+            if (state.expenses.length === 0) {
+                historyContainer.innerHTML = `
+                    <div class="text-center text-gray-500 py-4">
+                        <p class="text-sm">No hay gastos registrados</p>
+                    </div>
+                `;
+            } else {
+                historyContainer.innerHTML = [...state.expenses].reverse().map(expense => `
+                    <div class="bg-gray-600 p-3 rounded-lg">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-medium">$${formatCurrency(expense.amount)}</span>
+                            <span class="text-xs text-gray-400">${expense.timestamp}</span>
+                        </div>
+                        <p class="text-sm text-gray-300">${expense.concept}</p>
+                        <p class="text-xs text-orange-400">${expense.category}</p>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function validateCustomExpense() {
+            const concept = document.getElementById('expense-concept').value.trim();
+            const amount = parseFloat(document.getElementById('expense-amount').value) || 0;
+            const cashSales = state.sales.filter(s => s.paymentMethod === 'cash').reduce((sum, s) => sum + s.total, 0);
+            const currentCash = state.initialCash + cashSales - state.totalWithdrawals - state.totalExpenses;
+            
+            const isValid = concept.length > 0 && amount > 0 && amount <= currentCash;
+            document.getElementById('add-custom-expense').disabled = !isValid;
+        }
+
+        function autoReplenishInventory() {
+            const piecesToAdd = 100;
+            const cost = piecesToAdd * state.costPerPiece;
+            const cashSales = state.sales.filter(s => s.paymentMethod === 'cash').reduce((sum, s) => sum + s.total, 0);
+            const currentCash = state.initialCash + cashSales - state.totalWithdrawals - state.totalExpenses;
+            
+            if (cost > currentCash) {
+                showNotification(`Fondos insuficientes. Necesita $${formatCurrency(cost)} para reponer inventario`, 'error');
+                return;
+            }
+            
+            // Add expense for inventory purchase
+            const expense = {
+                id: Date.now(),
+                concept: `Reposición de inventario (${piecesToAdd} piezas)`,
+                amount: cost,
+                category: 'Ingredientes',
+                timestamp: new Date().toLocaleString()
+            };
+            
+            state.expenses.push(expense);
+            state.totalExpenses += cost;
+            state.inventory += piecesToAdd;
+            
+            updateStatsDisplay();
+            updateExpenseDisplay();
+            
+            showNotification(`Inventario repuesto: +${piecesToAdd} piezas por $${formatCurrency(cost)}`);
+        }
+
+        // Withdrawal Functions
+        function processWithdrawal() {
+            const amount = parseFloat(document.getElementById('withdrawal-amount').value) || 0;
+            const concept = document.getElementById('withdrawal-concept').value.trim();
+            const cashSales = state.sales.filter(s => s.paymentMethod === 'cash').reduce((sum, s) => sum + s.total, 0);
+            const availableCash = state.initialCash + cashSales - state.totalWithdrawals - state.totalExpenses;
+            
+            if (amount <= 0) {
+                showNotification('Ingrese una cantidad válida', 'error');
+                return;
+            }
+            
+            if (amount > availableCash) {
+                showNotification('Fondos insuficientes en caja', 'error');
+                return;
+            }
+            
+            if (!concept) {
+                showNotification('Ingrese el concepto del retiro', 'error');
+                return;
+            }
+            
+            const withdrawal = {
+                id: Date.now(),
+                amount: amount,
+                concept: concept,
+                timestamp: new Date().toLocaleString()
+            };
+            
+            state.withdrawals.push(withdrawal);
+            state.totalWithdrawals += amount;
+            
+            updateStatsDisplay();
+            updateWithdrawalDisplay();
+            
+            // Clear form
+            document.getElementById('withdrawal-amount').value = '';
+            document.getElementById('withdrawal-concept').value = '';
+            document.getElementById('process-withdrawal').disabled = true;
+            
+            showNotification(`Retiro de $${formatCurrency(amount)} procesado`);
+        }
+
+        function updateWithdrawalDisplay() {
+            const historyContainer = document.getElementById('withdrawal-history');
+            const cashSales = state.sales.filter(s => s.paymentMethod === 'cash').reduce((sum, s) => sum + s.total, 0);
+            const availableCash = state.initialCash + cashSales - state.totalWithdrawals - state.totalExpenses;
+            
+            document.getElementById('available-cash').textContent = formatCurrency(availableCash);
+            
+            // Calculate recommendations
+            const totalSales = state.sales.reduce((sum, s) => sum + s.total, 0);
+            const totalPiecesSold = state.sales.reduce((total, sale) => total + sale.pieces, 0);
+            const totalCosts = totalPiecesSold * state.costPerPiece;
+            const grossProfit = totalSales - totalCosts;
+            
+            // Available profit (what can be withdrawn safely)
+            const availableProfit = Math.max(0, grossProfit);
+            
+            // Inventory recommendations
+            const currentInventory = state.inventory;
+            const averageDailySales = totalPiecesSold > 0 ? totalPiecesSold : 50; // Default to 50 if no sales
+            const recommendedInventory = Math.max(100, averageDailySales * 2); // Keep 2 days worth
+            const piecesToBuy = Math.max(0, Math.ceil(recommendedInventory - currentInventory));
+            const inventoryNeeded = piecesToBuy * state.costPerPiece;
+            
+            // Keep in cash (for next day operations)
+            const keepInCash = Math.max(200, inventoryNeeded * 0.5); // At least $200 or half of inventory cost
+            
+            // Update display
+            document.getElementById('available-profit').textContent = formatCurrency(availableProfit);
+            document.getElementById('inventory-needed').textContent = formatCurrency(inventoryNeeded);
+            document.getElementById('pieces-to-buy').textContent = piecesToBuy;
+            document.getElementById('keep-in-cash').textContent = formatCurrency(keepInCash);
+            
+            if (state.withdrawals.length === 0) {
+                historyContainer.innerHTML = `
+                    <div class="text-center text-gray-500 py-4">
+                        <p class="text-sm">No hay retiros registrados</p>
+                    </div>
+                `;
+            } else {
+                historyContainer.innerHTML = [...state.withdrawals].reverse().map(withdrawal => `
+                    <div class="bg-gray-600 p-3 rounded-lg">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-medium">$${formatCurrency(withdrawal.amount)}</span>
+                            <span class="text-xs text-gray-400">${withdrawal.timestamp}</span>
+                        </div>
+                        <p class="text-sm text-gray-300">${withdrawal.concept}</p>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function validateWithdrawal() {
+            const amount = parseFloat(document.getElementById('withdrawal-amount').value) || 0;
+            const concept = document.getElementById('withdrawal-concept').value.trim();
+            const cashSales = state.sales.filter(s => s.paymentMethod === 'cash').reduce((sum, s) => sum + s.total, 0);
+            const availableCash = state.initialCash + cashSales - state.totalWithdrawals - state.totalExpenses;
+            
+            const isValid = amount > 0 && amount <= availableCash && concept.length > 0;
+            document.getElementById('process-withdrawal').disabled = !isValid;
+        }
+
+        // Cash Register Functions
+        function updateCashRegisterDisplay() {
+            const cashSales = state.sales.filter(s => s.paymentMethod === 'cash').reduce((sum, s) => sum + s.total, 0);
+            const transferSales = state.sales.filter(s => s.paymentMethod === 'transfer').reduce((sum, s) => sum + s.total, 0);
+            const totalSales = cashSales + transferSales;
+
+            const totalWithdrawals = state.totalWithdrawals;
+            const totalExpenses = state.totalExpenses;
+            const finalCash = state.initialCash + cashSales - totalWithdrawals - totalExpenses;
+            
+            // Basic stats
+            document.getElementById('register-initial-cash').textContent = formatCurrency(state.initialCash);
+            document.getElementById('register-cash-sales').textContent = formatCurrency(cashSales);
+            document.getElementById('register-transfer-sales').textContent = formatCurrency(transferSales);
+            document.getElementById('register-total-sales').textContent = formatCurrency(totalSales);
+            document.getElementById('register-final-cash').textContent = formatCurrency(finalCash);
+            
+            // Update Slider
+            const cashSlider = document.getElementById('cash-slider-bar');
+            const transferSlider = document.getElementById('transfer-slider-bar');
+            const cashLabel = document.getElementById('cash-slider-label');
+            const transferLabel = document.getElementById('transfer-slider-label');
+
+            if (totalSales > 0) {
+                const cashPercent = (cashSales / totalSales) * 100;
+                const transferPercent = (transferSales / totalSales) * 100;
+                cashSlider.style.width = `${cashPercent}%`;
+                transferSlider.style.width = `${transferPercent}%`;
+                cashLabel.textContent = `Efectivo ${cashPercent.toFixed(1)}%`;
+                transferLabel.textContent = `Transferencia ${transferPercent.toFixed(1)}%`;
+            } else {
+                cashSlider.style.width = '0%';
+                transferSlider.style.width = '0%';
+                cashLabel.textContent = 'Efectivo 0%';
+                transferLabel.textContent = 'Transferencia 0%';
+            }
+
+
+            // Profit analysis
+            const totalPiecesSold = state.sales.reduce((total, sale) => total + sale.pieces, 0);
+            const totalProductCosts = state.sales.reduce((total, sale) => {
+                return total + sale.items.reduce((itemTotal, item) => {
+                    const cost = item.cost ? item.cost : (item.pieces * (item.isCustom ? 1 : item.quantity)) * state.costPerPiece;
+                    return itemTotal + cost;
+                }, 0);
+            }, 0);
+            
+            const grossIncome = totalSales;
+            const netProfit = grossIncome - totalProductCosts - totalExpenses;
+            
+            document.getElementById('gross-income').textContent = formatCurrency(grossIncome);
+            document.getElementById('product-costs').textContent = formatCurrency(totalProductCosts);
+            document.getElementById('operational-expenses').textContent = formatCurrency(totalExpenses);
+            document.getElementById('net-profit').textContent = formatCurrency(netProfit);
+            
+            // Sales summary
+            const totalTransactions = state.sales.length;
+            const averageTicket = totalTransactions > 0 ? (totalSales / totalTransactions) : 0;
+            
+            document.getElementById('total-transactions').textContent = totalTransactions;
+            document.getElementById('total-pieces-sold').textContent = totalPiecesSold;
+            document.getElementById('average-ticket').textContent = formatCurrency(averageTicket);
+        }
+
+        function printCashRegister() {
+            // Re-calculate values for printing
+            const cashSales = state.sales.filter(s => s.paymentMethod === 'cash').reduce((sum, s) => sum + s.total, 0);
+            const transferSales = state.sales.filter(s => s.paymentMethod === 'transfer').reduce((sum, s) => sum + s.total, 0);
+            const totalSales = cashSales + transferSales;
+            const finalCash = state.initialCash + cashSales - state.totalWithdrawals - state.totalExpenses;
+            const netProfit = parseFloat(document.getElementById('net-profit').textContent);
+            const totalTransactions = state.sales.length;
+            const totalPiecesSold = state.sales.reduce((total, sale) => total + sale.pieces, 0);
+            const averageTicket = totalTransactions > 0 ? (totalSales / totalTransactions) : 0;
+
+            const printContent = `
+                ========================================
+                          CORTE DE CAJA
+                ========================================
+                Fecha: ${new Date().toLocaleString()}
+                
+                RESUMEN DE CAJA:
+                Caja inicial:       $${formatCurrency(state.initialCash)}
+                (+) Ventas Efectivo:  $${formatCurrency(cashSales)}
+                (-) Retiros:          $${formatCurrency(state.totalWithdrawals)}
+                (-) Gastos:           $${formatCurrency(state.totalExpenses)}
+                ----------------------------------------
+                (=) Caja Final:       $${formatCurrency(finalCash)}
+                
+                RESUMEN DE INGRESOS:
+                Ventas Efectivo:    $${formatCurrency(cashSales)}
+                Ventas Transferencia: $${formatCurrency(transferSales)}
+                ----------------------------------------
+                (=) Ventas Totales:   $${formatCurrency(totalSales)}
+
+                ANÁLISIS DE GANANCIAS:
+                Ganancia Neta:      $${formatCurrency(netProfit)}
+                
+                RESUMEN DE VENTAS:
+                Transacciones:      ${totalTransactions}
+                Piezas vendidas:    ${totalPiecesSold}
+                Ticket promedio:    $${formatCurrency(averageTicket)}
+                
+                ========================================
+            `;
+            
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                    <head><title>Corte de Caja</title></head>
+                    <body style="font-family: monospace; white-space: pre-line; padding: 20px;">
+                        ${printContent}
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+            
+            showNotification('Corte de caja enviado a impresión');
+        }
+
+        function closeDay() {
+            const cashSales = state.sales.filter(s => s.paymentMethod === 'cash').reduce((sum, s) => sum + s.total, 0);
+            const finalCash = state.initialCash + cashSales - state.totalWithdrawals - state.totalExpenses;
+            state.initialCash = finalCash; // The final cash of today is the initial for tomorrow
+            
+            // Reset daily counters
+            state.sales = [];
+            state.withdrawals = [];
+            state.expenses = [];
+            state.dailySales = 0;
+            state.totalWithdrawals = 0;
+            state.totalExpenses = 0;
+            
+            updateStatsDisplay();
+            closeModal('cash-register-modal');
+            showNotification('Día cerrado correctamente. Nuevo día iniciado.');
+        }
+
+        function renderProducts() {
+            const grid = document.getElementById('products-grid');
+            grid.innerHTML = packageTypes.map(pkg => `
+                <div id="product-card-${pkg.id}" class="package-card bg-gray-800 border border-gray-700 rounded-lg p-4 hover:border-blue-500 cursor-pointer flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-start justify-between mb-3">
+                            <span class="text-3xl">${pkg.icon}</span>
+                            <span class="text-2xl font-bold text-green-400">$${pkg.price}</span>
+                        </div>
+                        <h3 class="font-semibold mb-2">${pkg.name}</h3>
+                    </div>
+                    <div>
+                        ${pkg.pieces > 0 ? `<p class="text-sm text-gray-400">${pkg.isCustom ? 'Por pieza' : `${pkg.pieces} piezas`}</p>` : ''}
+                        ${pkg.isCustom ? `<p class="text-xs text-yellow-400 mt-1">Seleccionar cantidad</p>` : ''}
+                    </div>
+                </div>
+            `).join('');
+            updateProductGridAvailability();
+        }
+
+        function updateProductGridAvailability() {
+            const piecesInCart = getTotalPieces();
+            const availableInventory = state.inventory - piecesInCart;
+
+            packageTypes.forEach(pkg => {
+                const card = document.getElementById(`product-card-${pkg.id}`);
+                if (!card) return;
+
+                const isAvailable = (pkg.pieces || 0) === 0 || (pkg.pieces || 0) <= availableInventory;
+                
+                if (isAvailable) {
+                    card.classList.remove('opacity-50', 'cursor-not-allowed');
+                    card.onclick = () => {
+                        if (pkg.isCustom) {
+                            openCustomQuantityModal(pkg);
+                        } else {
+                            addToCart(pkg);
+                        }
+                    };
+                } else {
+                    card.classList.add('opacity-50', 'cursor-not-allowed');
+                    card.onclick = () => {
+                        showNotification(`Inventario insuficiente. Solo quedan ${availableInventory} piezas.`, 'error');
+                    };
+                }
+            });
+        }
+
+
+        // Modal Functions
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // Settings Functions
+        function saveSettings() {
+            const inventory = parseInt(document.getElementById('inventory-input').value) || 0;
+            const cost = parseFloat(document.getElementById('cost-input').value) || 0;
+            const cash = parseFloat(document.getElementById('cash-input').value) || 0;
+            
+            state.inventory = inventory;
+            state.costPerPiece = cost;
+            state.initialCash = cash;
+            
+            updateStatsDisplay();
+            updateProductGridAvailability();
+            closeModal('settings-modal');
+            showNotification('Configuración guardada');
+        }
+
+        // Checkout Functions
+        function openCheckout() {
+            if (state.cart.length === 0) return;
+            
+            const total = getCartTotal();
+            
+            document.getElementById('checkout-total').textContent = formatCurrency(total);
+            document.getElementById('cash-received').value = '';
+            document.getElementById('change-display').classList.add('hidden');
+            
+            // Reset to cash by default
+            selectPaymentMethod('cash');
+            
+            openModal('checkout-modal');
+        }
+
+        function selectPaymentMethod(method) {
+            selectedPaymentMethod = method;
+            const cashBtn = document.getElementById('payment-cash');
+            const transferBtn = document.getElementById('payment-transfer');
+            const cashSection = document.getElementById('cash-payment-section');
+            const completeSaleBtn = document.getElementById('complete-sale');
+
+            if (method === 'cash') {
+                cashBtn.classList.add('selected');
+                transferBtn.classList.remove('selected');
+                cashSection.style.display = 'block';
+                calculateChange(); // Re-validate
+            } else { // transfer
+                transferBtn.classList.add('selected');
+                cashBtn.classList.remove('selected');
+                cashSection.style.display = 'none';
+                completeSaleBtn.disabled = false; // Enable immediately for transfers
+            }
+        }
+
+        function calculateChange() {
+            if (selectedPaymentMethod !== 'cash') return;
+
+            const total = getCartTotal();
+            const cashReceived = parseFloat(document.getElementById('cash-received').value) || 0;
+            const change = cashReceived - total;
+            
+            const changeDisplay = document.getElementById('change-display');
+            const changeAmount = document.getElementById('change-amount');
+            const completeSaleBtn = document.getElementById('complete-sale');
+            
+            if (cashReceived >= total && cashReceived > 0) {
+                changeAmount.textContent = formatCurrency(change);
+                changeDisplay.classList.remove('hidden');
+                completeSaleBtn.disabled = false;
+            } else {
+                changeDisplay.classList.add('hidden');
+                completeSaleBtn.disabled = true;
+            }
+        }
+
+        function completeSale() {
+            const total = getCartTotal();
+            const totalPieces = getTotalPieces();
+            let cashReceived = 0;
+            let change = 0;
+
+            if (selectedPaymentMethod === 'cash') {
+                cashReceived = parseFloat(document.getElementById('cash-received').value) || 0;
+                if (cashReceived < total) {
+                    showNotification('El efectivo recibido es menor que el total.', 'error');
+                    return;
+                }
+                change = cashReceived - total;
+            } else { // transfer
+                cashReceived = total; // For record keeping, assume received amount is the total
+                change = 0;
+            }
+            
+            // Update inventory
+            state.inventory -= totalPieces;
+            
+            // Save sale
+            const sale = {
+                id: Date.now(),
+                items: JSON.parse(JSON.stringify(state.cart)), // Deep copy of cart items
+                total: total,
+                paymentMethod: selectedPaymentMethod,
+                cashReceived: cashReceived,
+                change: change,
+                pieces: totalPieces,
+                timestamp: new Date().toLocaleString()
+            };
+            
+            state.sales.push(sale);
+            
+            // Clear cart
+            state.cart = [];
+            
+            // Update displays
+            updateCartDisplay();
+            updateStatsDisplay();
+            updateProductGridAvailability();
+            
+            // Close modal
+            closeModal('checkout-modal');
+            
+            // Show success message
+            showNotification(`Venta completada por $${formatCurrency(total)}`);
+        }
+        
+        // Sales History Functions
+        function openHistoryModal() {
+            renderSalesHistory();
+            openModal('history-modal');
+        }
+
+        function renderSalesHistory() {
+            const content = document.getElementById('sales-history-content');
+            if (state.sales.length === 0) {
+                content.innerHTML = `<div class="text-center text-gray-500 py-8">No hay ventas registradas hoy.</div>`;
+                return;
+            }
+            content.innerHTML = [...state.sales].reverse().map(sale => `
+                <div class="bg-gray-700 p-4 rounded-lg flex items-center justify-between">
+                    <div>
+                        <p class="font-bold flex items-center">
+                            ${sale.paymentMethod === 'cash' ? '💵' : '💳'}
+                            <span class="ml-2">Venta #${sale.id}</span>
+                        </p>
+                        <p class="text-sm text-gray-400">${sale.timestamp}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-lg font-bold text-green-400">$${formatCurrency(sale.total)}</p>
+                        <button class="text-sm text-blue-400 hover:underline" onclick="openSaleDetailModal(${sale.id})">Ver Detalles</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openSaleDetailModal(saleId) {
+            const sale = state.sales.find(s => s.id === saleId);
+            if (!sale) return;
+            renderSaleDetail(sale);
+            openModal('sale-detail-modal');
+        }
+
+        function renderSaleDetail(sale) {
+            const content = document.getElementById('sale-detail-content');
+            const subtotal = sale.total - getShippingCost(sale.total); // Approximate subtotal
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div class="text-center">
+                        <p class="text-gray-400">ID de Venta: ${sale.id}</p>
+                        <p class="text-gray-400">${sale.timestamp}</p>
+                    </div>
+                    <div class="border-t border-b border-gray-600 py-2 space-y-2">
+                        ${sale.items.map(item => `
+                            <div class="flex justify-between text-sm">
+                                <span>${item.icon} ${item.name} (x${item.quantity})</span>
+                                <span>$${formatCurrency(item.isCustom ? item.price : item.price * item.quantity)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="space-y-1">
+                        <div class="flex justify-between"><span>Subtotal:</span><span>$${formatCurrency(subtotal)}</span></div>
+                        <div class="flex justify-between"><span>Envío:</span><span>$${formatCurrency(getShippingCost(subtotal))}</span></div>
+                        <div class="flex justify-between font-bold text-lg"><span class="text-green-400">Total:</span><span class="text-green-400">$${formatCurrency(sale.total)}</span></div>
+                    </div>
+                     <div class="border-t border-gray-600 pt-2 space-y-1">
+                        <div class="flex justify-between">
+                            <span>Método de Pago:</span>
+                            <span class="font-semibold">${sale.paymentMethod === 'cash' ? '💵 Efectivo' : '💳 Transferencia'}</span>
+                        </div>
+                        ${sale.paymentMethod === 'cash' ? `
+                        <div class="flex justify-between"><span>Efectivo Recibido:</span><span>$${formatCurrency(sale.cashReceived)}</span></div>
+                        <div class="flex justify-between"><span>Cambio:</span><span>$${formatCurrency(sale.change)}</span></div>
+                        ` : ''}
+                    </div>
+                    <button onclick="printReceipt(${sale.id})" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold">
+                        🖨️ Imprimir Recibo
+                    </button>
+                </div>
+            `;
+        }
+        
+        function printReceipt(saleId) {
+            const sale = state.sales.find(s => s.id === saleId);
+            if (!sale) return;
+
+            const subtotal = sale.total - getShippingCost(sale.total); // Approximate subtotal
+            
+            let itemsList = '';
+            sale.items.forEach(item => {
+                const itemTotal = item.isCustom ? item.price : item.price * item.quantity;
+                itemsList += `
+                <tr>
+                    <td>${item.name} (x${item.quantity})</td>
+                    <td style="text-align: right;">$${formatCurrency(itemTotal)}</td>
+                </tr>
+                `;
+            });
+
+            const paymentDetails = sale.paymentMethod === 'cash' ? `
+                <tr><td>Efectivo Recibido:</td><td style="text-align: right;">$${formatCurrency(sale.cashReceived)}</td></tr>
+                <tr><td>Cambio:</td><td style="text-align: right;">$${formatCurrency(sale.change)}</td></tr>
+            ` : `
+                <tr><td><strong>Pagado con:</strong></td><td style="text-align: right;"><strong>Transferencia</strong></td></tr>
+            `;
+
+            const printContent = `
+                <div style="width: 300px; margin: auto; font-family: 'Courier New', Courier, monospace; font-size: 14px;">
+                    <h2 style="text-align: center;">Recibo de Venta</h2>
+                    <p style="text-align: center;">--------------------------------</p>
+                    <p><strong>Fecha:</strong> ${sale.timestamp}</p>
+                    <p><strong>Venta ID:</strong> #${sale.id}</p>
+                    <p style="text-align: center;">--------------------------------</p>
+                    <table style="width: 100%;">
+                        ${itemsList}
+                    </table>
+                    <p style="text-align: center;">--------------------------------</p>
+                    <table style="width: 100%;">
+                        <tr><td>Subtotal:</td><td style="text-align: right;">$${formatCurrency(subtotal)}</td></tr>
+                        <tr><td>Envío:</td><td style="text-align: right;">$${formatCurrency(getShippingCost(subtotal))}</td></tr>
+                        <tr><td><strong>Total:</strong></td><td style="text-align: right;"><strong>$${formatCurrency(sale.total)}</strong></td></tr>
+                    </table>
+                    <p style="text-align: center;">--------------------------------</p>
+                     <table style="width: 100%;">
+                        ${paymentDetails}
+                    </table>
+                    <p style="text-align: center; margin-top: 20px;">¡Gracias por su compra!</p>
+                </div>
+            `;
+            
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`<html><head><title>Recibo</title></head><body>${printContent}</body></html>`);
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize display
+            renderProducts();
+            updateCartDisplay();
+            updateStatsDisplay();
+            
+            // Settings modal
+            document.getElementById('settings-btn').addEventListener('click', () => {
+                document.getElementById('inventory-input').value = state.inventory;
+                document.getElementById('cost-input').value = state.costPerPiece;
+                document.getElementById('cash-input').value = state.initialCash;
+                openModal('settings-modal');
+            });
+            
+            document.getElementById('close-settings').addEventListener('click', () => closeModal('settings-modal'));
+            document.getElementById('save-settings').addEventListener('click', saveSettings);
+            
+            // Checkout modal
+            document.getElementById('checkout-btn').addEventListener('click', openCheckout);
+            document.getElementById('close-checkout').addEventListener('click', () => closeModal('checkout-modal'));
+            document.getElementById('complete-sale').addEventListener('click', completeSale);
+            document.getElementById('payment-cash').addEventListener('click', () => selectPaymentMethod('cash'));
+            document.getElementById('payment-transfer').addEventListener('click', () => selectPaymentMethod('transfer'));
+            
+            // Cash received input
+            document.getElementById('cash-received').addEventListener('input', calculateChange);
+            
+            // Clear cart
+            document.getElementById('clear-cart').addEventListener('click', clearCart);
+            
+            // Withdrawals modal
+            document.getElementById('withdrawals-btn').addEventListener('click', () => {
+                updateWithdrawalDisplay();
+                openModal('withdrawals-modal');
+            });
+            
+            document.getElementById('close-withdrawals').addEventListener('click', () => closeModal('withdrawals-modal'));
+            document.getElementById('process-withdrawal').addEventListener('click', processWithdrawal);
+            
+            // Withdrawal form validation
+            document.getElementById('withdrawal-amount').addEventListener('input', validateWithdrawal);
+            document.getElementById('withdrawal-concept').addEventListener('input', validateWithdrawal);
+            
+            // Cash register modal
+            document.getElementById('cash-register-btn').addEventListener('click', () => {
+                updateCashRegisterDisplay();
+                openModal('cash-register-modal');
+            });
+            
+            document.getElementById('close-cash-register').addEventListener('click', () => closeModal('cash-register-modal'));
+            document.getElementById('print-register').addEventListener('click', printCashRegister);
+            document.getElementById('close-day').addEventListener('click', closeDay);
+            
+            // Expenses modal
+            document.getElementById('expenses-btn').addEventListener('click', () => {
+                updateExpenseDisplay();
+                openModal('expenses-modal');
+            });
+            
+            document.getElementById('close-expenses').addEventListener('click', () => closeModal('expenses-modal'));
+            document.getElementById('add-custom-expense').addEventListener('click', addCustomExpense);
+            document.getElementById('auto-replenish').addEventListener('click', autoReplenishInventory);
+            
+            // Expense form validation
+            document.getElementById('expense-concept').addEventListener('input', validateCustomExpense);
+            document.getElementById('expense-amount').addEventListener('input', validateCustomExpense);
+            
+            // History modal
+            document.getElementById('history-btn').addEventListener('click', openHistoryModal);
+            document.getElementById('close-history').addEventListener('click', () => closeModal('history-modal'));
+            document.getElementById('close-sale-detail').addEventListener('click', () => closeModal('sale-detail-modal'));
+
+
+            // Custom quantity modal
+            document.getElementById('close-custom-quantity').addEventListener('click', () => closeModal('custom-quantity-modal'));
+            document.getElementById('add-custom-to-cart').addEventListener('click', addCustomToCart);
+            document.getElementById('increase-quantity').addEventListener('click', increaseCustomQuantity);
+            document.getElementById('decrease-quantity').addEventListener('click', decreaseCustomQuantity);
+            document.getElementById('custom-quantity-input').addEventListener('input', updateCustomTotal);
+            
+            // Close modals when clicking outside
+            ['settings-modal', 'checkout-modal', 'withdrawals-modal', 'cash-register-modal', 'expenses-modal', 'custom-quantity-modal', 'history-modal', 'sale-detail-modal'].forEach(id => {
+                document.getElementById(id).addEventListener('click', (e) => {
+                    if (e.target === e.currentTarget) closeModal(id);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
