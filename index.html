@@ -3,6 +3,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema POS - Punto de Venta</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         
@@ -593,6 +594,9 @@
             <div class="p-4 border-t border-gray-700 flex space-x-2 flex-shrink-0">
                 <button id="print-register" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold">
                     🖨️ Imprimir Corte
+                </button>
+                <button id="save-register-pdf" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-semibold">
+                    📄 Guardar PDF
                 </button>
                 <button id="close-day" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-semibold">
                     🔒 Cerrar Día
@@ -1732,19 +1736,20 @@ Ticket promedio:    $${formatCurrency(averageTicket).padStart(12)}
                         <div class="flex justify-between"><span>Cambio:</span><span>$${formatCurrency(sale.change)}</span></div>
                         ` : ''}
                     </div>
-                    <button onclick="printReceipt(${sale.id})" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold">
-                        🖨️ Imprimir Recibo
-                    </button>
+                    <div class="flex space-x-2">
+                        <button onclick="printReceipt(${sale.id})" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold">
+                            🖨️ Imprimir
+                        </button>
+                        <button onclick="saveReceiptAsPdf(${sale.id})" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-semibold">
+                            📄 Guardar PDF
+                        </button>
+                    </div>
                 </div>
             `;
         }
         
-        function printReceipt(saleId) {
-            const sale = state.sales.find(s => s.id === saleId);
-            if (!sale) return;
-
-            const subtotal = sale.total - getShippingCost(sale.total); 
-            
+        function generateReceiptHTML(sale) {
+            const subtotal = sale.total - getShippingCost(sale.total);
             let itemsList = '';
             sale.items.forEach(item => {
                 const itemTotal = formatCurrency(item.price * item.quantity);
@@ -1763,7 +1768,7 @@ Ticket promedio:    $${formatCurrency(averageTicket).padStart(12)}
                 Pagado con:           Transferencia
             `;
 
-            const printContent = `
+            return `
                 <div style="width: 58mm; font-family: 'Courier New', monospace; font-size: 10px; line-height: 1.4;">
                     <h2 style="text-align: center; margin: 0;">Recibo de Venta</h2>
                     <p style="text-align: center; margin: 0;">--------------------------------</p>
@@ -1783,6 +1788,12 @@ ${paymentDetails}
                     <p style="text-align: center; margin-top: 10px;">¡Gracias por su compra!</p>
                 </div>
             `;
+        }
+        
+        function printReceipt(saleId) {
+            const sale = state.sales.find(s => s.id === saleId);
+            if (!sale) return;
+            const printContent = generateReceiptHTML(sale);
             
             const printWindow = window.open('', '_blank', 'width=300,height=500');
             printWindow.document.write(`<html><head><title>Recibo</title></head><body>${printContent}</body></html>`);
@@ -1790,6 +1801,26 @@ ${paymentDetails}
             printWindow.focus();
             printWindow.print();
             printWindow.close();
+        }
+
+        function saveReceiptAsPdf(saleId) {
+            const sale = state.sales.find(s => s.id === saleId);
+            if (!sale) return;
+            const printContent = generateReceiptHTML(sale);
+            
+            const element = document.createElement('div');
+            element.innerHTML = printContent;
+            
+            const opt = {
+              margin:       [5, 2, 5, 2], // top, left, bottom, right in mm
+              filename:     `recibo_${sale.id}.pdf`,
+              image:        { type: 'jpeg', quality: 0.98 },
+              html2canvas:  { scale: 2, logging: false },
+              jsPDF:        { unit: 'mm', format: [58, 200], orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save();
+            showNotification('Recibo guardado como PDF.');
         }
         
         // Flavor Functions
