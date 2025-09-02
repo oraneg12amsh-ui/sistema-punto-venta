@@ -159,9 +159,12 @@
                         <span class="text-gray-400">Subtotal:</span>
                         <span class="font-semibold">$<span id="cart-subtotal">0.00</span></span>
                     </div>
-                    <div id="shipping-section" class="flex justify-between items-center mb-2">
-                        <span class="text-gray-400">Envío:</span>
-                        <span class="font-semibold" id="shipping-cost">$0.00</span>
+                    <div id="shipping-section" class="flex justify-between items-center mb-2 -mx-2 px-2 rounded-lg transition-all duration-300">
+                         <span id="shipping-label-container" class="flex items-center text-gray-400">
+                            <span id="shipping-icon-container" class="mr-2"></span>
+                            <span id="shipping-text">Envío:</span>
+                        </span>
+                        <span class="font-semibold" id="shipping-cost-container">$<span id="shipping-cost">0.00</span></span>
                     </div>
                     <div id="shipping-message" class="text-xs text-center mb-3 p-2 rounded-lg hidden">
                         <!-- Shipping message will be inserted here -->
@@ -252,6 +255,9 @@
                 </div>
                 <button id="save-settings" class="w-full btn-primary text-white py-2 rounded-lg font-semibold">
                     💾 Guardar Configuración
+                </button>
+                <button id="reset-data" class="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-semibold">
+                    🗑️ Reiniciar Datos
                 </button>
             </div>
         </div>
@@ -372,6 +378,34 @@
             </div>
         </div>
     </div>
+    
+    <!-- Flavor Modal -->
+    <div id="flavor-modal" class="fixed inset-0 bg-black bg-opacity-70 modal-backdrop hidden items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center">
+                <h3 class="text-xl font-bold">🌶️ Elige Sabor(es)</h3>
+                <button id="close-flavor-modal" class="text-gray-400 hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-4 space-y-4">
+                <div class="bg-gray-700 p-4 rounded-lg text-center">
+                    <div class="text-3xl mb-2" id="flavor-modal-icon">🍗</div>
+                    <h4 class="font-semibold" id="flavor-modal-name">Producto</h4>
+                    <p class="text-sm text-blue-300 mt-1" id="flavor-modal-limit"></p>
+                </div>
+                <div id="flavor-options" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <!-- Flavor checkboxes will be injected here -->
+                </div>
+                <button id="confirm-flavors-btn" class="w-full btn-primary text-white py-2 rounded-lg font-semibold disabled:opacity-50" disabled>
+                    Confirmar Sabores
+                </button>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Expenses Modal -->
     <div id="expenses-modal" class="fixed inset-0 bg-black bg-opacity-70 modal-backdrop hidden items-center justify-center z-50 p-4">
@@ -663,25 +697,28 @@
 
         // Checkout State
         let selectedPaymentMethod = 'cash';
+        let currentProductForFlavor = null;
 
         // Package Types Data
         const packageTypes = [
-            { id: 1, name: 'Paquete Personal', pieces: 8, price: 85, icon: '👤' },
-            { id: 2, name: 'Paquete Dúo', pieces: 14, price: 135, icon: '👥' },
-            { id: 3, name: 'Paquete Amigos', pieces: 25, price: 235, icon: '⚡' },
-            { id: 4, name: 'Paquete Familiar', pieces: 35, price: 275, icon: '🏠' },
-            { id: 5, name: '1 kg', pieces: 18, price: 190, icon: '📦' },
-            { id: 6, name: '1/2 kg', pieces: 10, price: 95, icon: '📦' },
-            { id: 7, name: 'Orden', pieces: 6, price: 65, icon: '📦' },
-            { id: 8, name: 'Orden Kids', pieces: 4, price: 35, icon: '👶' },
+            { id: 1, name: 'Paquete Personal', pieces: 8, price: 85, icon: '👤', maxFlavors: 2 },
+            { id: 2, name: 'Paquete Dúo', pieces: 14, price: 135, icon: '👥', maxFlavors: 2 },
+            { id: 3, name: 'Paquete Amigos', pieces: 25, price: 235, icon: '⚡', maxFlavors: 2 },
+            { id: 4, name: 'Paquete Familiar', pieces: 35, price: 275, icon: '🏠', maxFlavors: 2 },
+            { id: 5, name: '1 kg', pieces: 18, price: 190, icon: '📦', maxFlavors: 7 },
+            { id: 6, name: '1/2 kg', pieces: 10, price: 95, icon: '📦', maxFlavors: 7 },
+            { id: 7, name: 'Orden', pieces: 6, price: 65, icon: '📦', maxFlavors: 1 },
+            { id: 8, name: 'Orden Kids', pieces: 4, price: 35, icon: '👶', maxFlavors: 1 },
             { id: 9, name: 'Orden de Papas Fritas', pieces: 0, price: 45, cost: 20.00, icon: '🍟' },
             { id: 10, name: 'Aderezo Ranch', pieces: 0, price: 20, cost: 8.00, icon: '🥗' },
             { id: 11, name: 'Coca-Cola 600 ml', pieces: 0, price: 30, cost: 15.00, icon: '🥤' },
             { id: 12, name: 'Manzanita 600 ml', pieces: 0, price: 30, cost: 15.00, icon: '🍎' },
-            { id: 13, name: 'Paquete Llenador (50 pzs)', pieces: 50, price: 450, icon: '⚡' },
-            { id: 14, name: '(LUNES X PIEZA)', pieces: 1, price: 6.5, icon: '📦', isCustom: true },
-            { id: 15, name: '(MARTES X PIEZA)', pieces: 1, price: 7.5, icon: '📦', isCustom: true }
+            { id: 13, name: 'Paquete Llenador (50 pzs)', pieces: 50, price: 450, icon: '⚡', maxFlavors: 2 },
+            { id: 14, name: '(LUNES X PIEZA)', pieces: 1, price: 6.5, icon: '📦', isCustom: true, maxFlavors: 2 },
+            { id: 15, name: '(MARTES X PIEZA)', pieces: 1, price: 7.5, icon: '📦', isCustom: true, maxFlavors: 2 }
         ];
+
+        const flavors = ['Habanero', 'BBQ', 'Valentina', 'Limón con Tajín', 'Búfalo', 'Ranch', 'Naturales'];
 
         // Utility Functions
         function formatCurrency(amount) {
@@ -718,29 +755,31 @@
         let currentCustomProduct = null;
 
         // Cart Functions
-        function addToCart(packageType, quantity = 1) {
+        function addToCart(item, quantity = 1) {
             const piecesAlreadyInCart = getTotalPieces();
-            const requiredPieces = (packageType.pieces || 0) * quantity;
+            const requiredPieces = (item.pieces || 0) * quantity;
 
-            if (packageType.pieces > 0 && (piecesAlreadyInCart + requiredPieces) > state.inventory) {
+            if (item.pieces > 0 && (piecesAlreadyInCart + requiredPieces) > state.inventory) {
                 showNotification(`Inventario insuficiente. Solo quedan ${state.inventory - piecesAlreadyInCart} piezas.`, 'error');
                 return;
             }
 
-            const existingItem = state.cart.find(item => item.id === packageType.id && item.price === packageType.price);
-            
-            if (existingItem) {
-                existingItem.quantity += quantity;
+            // For non-flavored, non-custom items, group them
+            if (!item.flavor && !item.isCustom) {
+                const existingItem = state.cart.find(cartItem => cartItem.id === item.id);
+                if (existingItem) {
+                    existingItem.quantity += quantity;
+                } else {
+                    state.cart.push({ ...item, quantity: quantity, cartId: Date.now() });
+                }
             } else {
-                state.cart.push({
-                    ...packageType,
-                    quantity: quantity
-                });
+                // For flavored or custom items, add as a new unique line item
+                state.cart.push({ ...item, quantity: quantity, cartId: Date.now() });
             }
             
             updateCartDisplay();
             updateStatsDisplay();
-            showNotification(`${packageType.name} agregado al carrito`);
+            showNotification(`${item.name} agregado al carrito`);
             updateProductGridAvailability();
         }
 
@@ -777,23 +816,16 @@
             if (!currentCustomProduct) return;
             
             const quantity = parseInt(document.getElementById('custom-quantity-input').value) || 1;
-            const piecesAlreadyInCart = getTotalPieces();
-
-            if (piecesAlreadyInCart + quantity > state.inventory) {
-                showNotification(`Inventario insuficiente. Solo quedan ${state.inventory - piecesAlreadyInCart} piezas.`, 'error');
-                return;
-            }
             
             const customItem = {
                 ...currentCustomProduct,
-                id: Date.now(),
                 pieces: quantity,
                 price: quantity * currentCustomProduct.price,
                 name: `${currentCustomProduct.name} (${quantity} pzs)`
             };
             
-            addToCart(customItem, 1);
             closeModal('custom-quantity-modal');
+            openFlavorModal(customItem);
         }
 
 
@@ -816,28 +848,25 @@
             }
         }
 
-        function removeFromCart(packageId) {
-            state.cart = state.cart.filter(item => item.id !== packageId);
+        function removeFromCart(cartId) {
+            state.cart = state.cart.filter(item => item.cartId !== cartId);
             updateCartDisplay();
             updateStatsDisplay();
             showNotification('Producto eliminado del carrito', 'warning');
             updateProductGridAvailability();
         }
 
-        function updateCartQuantity(packageId, newQuantity) {
-            const itemToUpdate = state.cart.find(item => item.id === packageId);
-            if (!itemToUpdate || itemToUpdate.isCustom) {
-                if(newQuantity <= 0) removeFromCart(packageId);
-                return;
-            };
-
+        function updateCartQuantity(cartId, newQuantity) {
+            const itemToUpdate = state.cart.find(item => item.cartId === cartId);
+            if (!itemToUpdate) return;
+            
             if (newQuantity <= 0) {
-                removeFromCart(packageId);
+                removeFromCart(cartId);
                 return;
             }
 
             const otherItemsPieces = state.cart
-                .filter(item => item.id !== packageId)
+                .filter(item => item.cartId !== cartId)
                 .reduce((sum, item) => sum + ((item.pieces || 0) * item.quantity), 0);
 
             const newItemPieces = (itemToUpdate.pieces || 0) * newQuantity;
@@ -862,12 +891,7 @@
         }
 
         function getCartSubtotal() {
-             return state.cart.reduce((total, item) => {
-                if (item.isCustom) {
-                    return total + item.price;
-                }
-                return total + (item.price * item.quantity);
-            }, 0);
+             return state.cart.reduce((total, item) => total + (item.price * item.quantity), 0);
         }
 
         function getShippingCost(subtotal) {
@@ -889,10 +913,16 @@
             const cartItems = document.getElementById('cart-items');
             const cartSubtotal = document.getElementById('cart-subtotal');
             const cartTotal = document.getElementById('cart-total');
-            const shippingCost = document.getElementById('shipping-cost');
+            const shippingCostSpan = document.getElementById('shipping-cost');
             const shippingMessage = document.getElementById('shipping-message');
             const checkoutBtn = document.getElementById('checkout-btn');
-            
+            const shippingSection = document.getElementById('shipping-section');
+            const shippingLabelContainer = document.getElementById('shipping-label-container');
+            const shippingIconContainer = document.getElementById('shipping-icon-container');
+            const shippingText = document.getElementById('shipping-text');
+            const shippingCostContainer = document.getElementById('shipping-cost-container');
+
+
             if (state.cart.length === 0) {
                 cartItems.innerHTML = `
                     <div class="text-center text-gray-500 py-8">
@@ -906,7 +936,7 @@
                 shippingMessage.classList.add('hidden');
             } else {
                 cartItems.innerHTML = state.cart.map(item => {
-                    const totalItemPrice = item.isCustom ? item.price : item.price * item.quantity;
+                    const totalItemPrice = item.price * item.quantity;
                     return `
                     <div class="cart-item bg-gray-700 p-3 rounded-lg">
                         <div class="flex items-center justify-between mb-2">
@@ -914,23 +944,21 @@
                                 <span class="text-lg">${item.icon}</span>
                                 <span class="font-medium text-sm">${item.name}</span>
                             </div>
-                            <button onclick="removeFromCart(${item.id})" class="text-red-400 hover:text-red-300">
+                            <button onclick="removeFromCart(${item.cartId})" class="text-red-400 hover:text-red-300">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                   <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
                             </button>
                         </div>
                         <div class="flex items-center justify-between">
-                            ${!item.isCustom ? `
                             <div class="flex items-center space-x-2">
-                                <button onclick="updateCartQuantity(${item.id}, ${item.quantity - 1})" class="w-6 h-6 bg-gray-600 rounded text-xs hover:bg-gray-500">-</button>
+                                <button onclick="updateCartQuantity(${item.cartId}, ${item.quantity - 1})" class="w-6 h-6 bg-gray-600 rounded text-xs hover:bg-gray-500">-</button>
                                 <span class="text-sm font-medium">${item.quantity}</span>
-                                <button onclick="updateCartQuantity(${item.id}, ${item.quantity + 1})" class="w-6 h-6 bg-gray-600 rounded text-xs hover:bg-gray-500">+</button>
+                                <button onclick="updateCartQuantity(${item.cartId}, ${item.quantity + 1})" class="w-6 h-6 bg-gray-600 rounded text-xs hover:bg-gray-500">+</button>
                             </div>
-                            ` : '<div></div>'}
                             <span class="text-green-400 font-semibold">$${formatCurrency(totalItemPrice)}</span>
                         </div>
-                        ${item.pieces > 0 && !item.isCustom ? `<div class="text-xs text-gray-400 mt-1">${(item.pieces || 0) * item.quantity} piezas</div>` : ''}
+                        ${item.pieces > 0 ? `<div class="text-xs text-gray-400 mt-1">${(item.pieces || 0) * item.quantity} piezas</div>` : ''}
                     </div>
                 `}).join('');
                 checkoutBtn.disabled = false;
@@ -941,9 +969,29 @@
             const total = subtotal + shipping;
             
             cartSubtotal.textContent = formatCurrency(subtotal);
-            shippingCost.textContent = formatCurrency(shipping);
+            shippingCostSpan.textContent = formatCurrency(shipping);
             cartTotal.textContent = formatCurrency(total);
             
+            // Update shipping visual feedback
+            if (shipping > 0) {
+                shippingSection.classList.add('bg-blue-900', 'bg-opacity-50', 'p-2');
+                shippingIconContainer.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-300" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+                      <path fill-rule="evenodd" d="M1.881 3.333A2 2 0 013.818 2h12.364a2 2 0 011.937 1.333l1.818 5.455a2 2 0 01-.364 2.118l-3.636 4.545a2 2 0 01-1.636.749H5a2 2 0 01-2-2V5.333a2 2 0 01-.119-1.667l1-2zM4 5v7h9.43a1 1 0 00.817-.375l2.83-3.537-1.417-4.251A1 1 0 0015.182 3H4z" clip-rule="evenodd" />
+                    </svg>
+                `;
+                shippingText.textContent = 'Envío a Domicilio:';
+                shippingLabelContainer.classList.add('text-blue-300');
+                shippingCostContainer.classList.add('text-blue-300');
+            } else {
+                shippingSection.classList.remove('bg-blue-900', 'bg-opacity-50', 'p-2');
+                shippingIconContainer.innerHTML = '';
+                shippingText.textContent = 'Envío:';
+                shippingLabelContainer.classList.remove('text-blue-300');
+                shippingCostContainer.classList.remove('text-blue-300');
+            }
+
             // Update shipping message
             if (state.cart.length > 0) {
                 if (shipping === 0) {
@@ -1012,7 +1060,7 @@
             
             updateStatsDisplay();
             updateExpenseDisplay();
-            
+            saveState();
             showNotification(`Gasto de $${formatCurrency(amount)} registrado: ${concept}`);
         }
 
@@ -1064,7 +1112,7 @@
             
             updateStatsDisplay();
             updateExpenseDisplay();
-            
+            saveState();
             showNotification(`Gasto de $${formatCurrency(amount)} registrado: ${concept}`);
         }
 
@@ -1144,7 +1192,7 @@
             
             updateStatsDisplay();
             updateExpenseDisplay();
-            
+            saveState();
             showNotification(`Inventario repuesto: +${piecesToAdd} piezas por $${formatCurrency(cost)}`);
         }
 
@@ -1188,6 +1236,7 @@
             document.getElementById('withdrawal-concept').value = '';
             document.getElementById('process-withdrawal').disabled = true;
             
+            saveState();
             showNotification(`Retiro de $${formatCurrency(amount)} procesado`);
         }
 
@@ -1328,47 +1377,44 @@
             const averageTicket = totalTransactions > 0 ? (totalSales / totalTransactions) : 0;
 
             const printContent = `
-                ========================================
-                          CORTE DE CAJA
-                ========================================
-                Fecha: ${new Date().toLocaleString()}
-                
-                RESUMEN DE CAJA:
-                Caja inicial:       $${formatCurrency(state.initialCash)}
-                (+) Ventas Efectivo:  $${formatCurrency(cashSales)}
-                (-) Retiros:          $${formatCurrency(state.totalWithdrawals)}
-                (-) Gastos:           $${formatCurrency(state.totalExpenses)}
-                ----------------------------------------
-                (=) Caja Final:       $${formatCurrency(finalCash)}
-                
-                RESUMEN DE INGRESOS:
-                Ventas Efectivo:    $${formatCurrency(cashSales)}
-                Ventas Transferencia: $${formatCurrency(transferSales)}
-                ----------------------------------------
-                (=) Ventas Totales:   $${formatCurrency(totalSales)}
+            <div style="width: 58mm; font-family: 'Courier New', monospace; font-size: 10px; line-height: 1.4;">
+                <h2 style="text-align: center; margin: 0;">CORTE DE CAJA</h2>
+                <p style="text-align: center; margin: 0;">================================</p>
+                <p style="margin: 0;">Fecha: ${new Date().toLocaleString()}</p>
+                <p style="text-align: center; margin: 0;">--------------------------------</p>
+                <pre style="margin: 0; white-space: pre-wrap;">
+RESUMEN DE CAJA:
+Caja inicial:     $${formatCurrency(state.initialCash).padStart(13)}
+(+) Ventas Efectivo:$${formatCurrency(cashSales).padStart(12)}
+(-) Retiros:        $${formatCurrency(state.totalWithdrawals).padStart(13)}
+(-) Gastos:         $${formatCurrency(state.totalExpenses).padStart(13)}
+--------------------------------
+(=) Caja Final:     $${formatCurrency(finalCash).padStart(13)}
 
-                ANÁLISIS DE GANANCIAS:
-                Ganancia Neta:      $${formatCurrency(netProfit)}
-                
-                RESUMEN DE VENTAS:
-                Transacciones:      ${totalTransactions}
-                Piezas vendidas:    ${totalPiecesSold}
-                Ticket promedio:    $${formatCurrency(averageTicket)}
-                
-                ========================================
+RESUMEN DE INGRESOS:
+Ventas Efectivo:    $${formatCurrency(cashSales).padStart(12)}
+Ventas Transfer.:   $${formatCurrency(transferSales).padStart(12)}
+--------------------------------
+(=) Ventas Totales: $${formatCurrency(totalSales).padStart(11)}
+
+ANÁLISIS DE GANANCIAS:
+Ganancia Neta:      $${formatCurrency(netProfit).padStart(12)}
+
+RESUMEN DE VENTAS:
+Transacciones:      ${String(totalTransactions).padStart(14)}
+Piezas vendidas:    ${String(totalPiecesSold).padStart(14)}
+Ticket promedio:    $${formatCurrency(averageTicket).padStart(12)}
+                </pre>
+                <p style="text-align: center; margin: 0;">================================</p>
+            </div>
             `;
             
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`
-                <html>
-                    <head><title>Corte de Caja</title></head>
-                    <body style="font-family: monospace; white-space: pre-line; padding: 20px;">
-                        ${printContent}
-                    </body>
-                </html>
-            `);
+            const printWindow = window.open('', '_blank', 'width=300,height=500');
+            printWindow.document.write(`<html><head><title>Corte de Caja</title></head><body>${printContent}</body></html>`);
             printWindow.document.close();
+            printWindow.focus();
             printWindow.print();
+            printWindow.close();
             
             showNotification('Corte de caja enviado a impresión');
         }
@@ -1387,6 +1433,7 @@
             state.totalExpenses = 0;
             
             updateStatsDisplay();
+            saveState();
             closeModal('cash-register-modal');
             showNotification('Día cerrado correctamente. Nuevo día iniciado.');
         }
@@ -1426,7 +1473,10 @@
                     card.onclick = () => {
                         if (pkg.isCustom) {
                             openCustomQuantityModal(pkg);
-                        } else {
+                        } else if (pkg.maxFlavors) {
+                            openFlavorModal(pkg);
+                        }
+                        else {
                             addToCart(pkg);
                         }
                     };
@@ -1453,6 +1503,41 @@
             modal.classList.remove('flex');
         }
 
+        // State Persistence Functions
+        function saveState() {
+            try {
+                // Save only the inventory number
+                localStorage.setItem('posInventory', JSON.stringify(state.inventory));
+            } catch (e) {
+                console.warn('LocalStorage is not available. State will not be saved.');
+            }
+        }
+
+        function loadState() {
+            try {
+                const savedInventory = localStorage.getItem('posInventory');
+                if (savedInventory) {
+                    state.inventory = JSON.parse(savedInventory);
+                }
+                // Other state properties will reset to their default values
+            } catch (e) {
+                console.warn('LocalStorage is not available. Could not load saved state.');
+            }
+        }
+
+        function resetData() {
+            try {
+                // Clear only the saved inventory
+                localStorage.removeItem('posInventory');
+            } catch (e) {
+                console.warn('LocalStorage is not available. Could not reset data.');
+            }
+            showNotification('Datos reiniciados. La página se recargará.', 'warning');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        }
+
         // Settings Functions
         function saveSettings() {
             const inventory = parseInt(document.getElementById('inventory-input').value) || 0;
@@ -1465,6 +1550,7 @@
             
             updateStatsDisplay();
             updateProductGridAvailability();
+            saveState();
             closeModal('settings-modal');
             showNotification('Configuración guardada');
         }
@@ -1568,12 +1654,14 @@
             updateCartDisplay();
             updateStatsDisplay();
             updateProductGridAvailability();
+            saveState();
             
             // Close modal
             closeModal('checkout-modal');
             
-            // Show success message
+            // Show success message and print receipt
             showNotification(`Venta completada por $${formatCurrency(total)}`);
+            printReceipt(sale.id);
         }
         
         // Sales History Functions
@@ -1625,7 +1713,7 @@
                         ${sale.items.map(item => `
                             <div class="flex justify-between text-sm">
                                 <span>${item.icon} ${item.name} (x${item.quantity})</span>
-                                <span>$${formatCurrency(item.isCustom ? item.price : item.price * item.quantity)}</span>
+                                <span>$${formatCurrency(item.price * item.quantity)}</span>
                             </div>
                         `).join('')}
                     </div>
@@ -1655,59 +1743,127 @@
             const sale = state.sales.find(s => s.id === saleId);
             if (!sale) return;
 
-            const subtotal = sale.total - getShippingCost(sale.total); // Approximate subtotal
+            const subtotal = sale.total - getShippingCost(sale.total); 
             
             let itemsList = '';
             sale.items.forEach(item => {
-                const itemTotal = item.isCustom ? item.price : item.price * item.quantity;
-                itemsList += `
-                <tr>
-                    <td>${item.name} (x${item.quantity})</td>
-                    <td style="text-align: right;">$${formatCurrency(itemTotal)}</td>
-                </tr>
-                `;
+                const itemTotal = formatCurrency(item.price * item.quantity);
+                let itemName = `${item.quantity}x ${item.name}`;
+                if (itemName.length > 20) {
+                    itemName = itemName.substring(0, 17) + '...';
+                }
+                const spaces = ' '.repeat(32 - itemName.length - itemTotal.length - 1);
+                itemsList += `${itemName}${spaces}$${itemTotal}\n`;
             });
 
             const paymentDetails = sale.paymentMethod === 'cash' ? `
-                <tr><td>Efectivo Recibido:</td><td style="text-align: right;">$${formatCurrency(sale.cashReceived)}</td></tr>
-                <tr><td>Cambio:</td><td style="text-align: right;">$${formatCurrency(sale.change)}</td></tr>
+                Efectivo Recibido: ${'$'.padStart(14, ' ')}${formatCurrency(sale.cashReceived)}
+                Cambio:            ${'$'.padStart(14, ' ')}${formatCurrency(sale.change)}
             ` : `
-                <tr><td><strong>Pagado con:</strong></td><td style="text-align: right;"><strong>Transferencia</strong></td></tr>
+                Pagado con:           Transferencia
             `;
 
             const printContent = `
-                <div style="width: 300px; margin: auto; font-family: 'Courier New', Courier, monospace; font-size: 14px;">
-                    <h2 style="text-align: center;">Recibo de Venta</h2>
-                    <p style="text-align: center;">--------------------------------</p>
-                    <p><strong>Fecha:</strong> ${sale.timestamp}</p>
-                    <p><strong>Venta ID:</strong> #${sale.id}</p>
-                    <p style="text-align: center;">--------------------------------</p>
-                    <table style="width: 100%;">
-                        ${itemsList}
-                    </table>
-                    <p style="text-align: center;">--------------------------------</p>
-                    <table style="width: 100%;">
-                        <tr><td>Subtotal:</td><td style="text-align: right;">$${formatCurrency(subtotal)}</td></tr>
-                        <tr><td>Envío:</td><td style="text-align: right;">$${formatCurrency(getShippingCost(subtotal))}</td></tr>
-                        <tr><td><strong>Total:</strong></td><td style="text-align: right;"><strong>$${formatCurrency(sale.total)}</strong></td></tr>
-                    </table>
-                    <p style="text-align: center;">--------------------------------</p>
-                     <table style="width: 100%;">
-                        ${paymentDetails}
-                    </table>
-                    <p style="text-align: center; margin-top: 20px;">¡Gracias por su compra!</p>
+                <div style="width: 58mm; font-family: 'Courier New', monospace; font-size: 10px; line-height: 1.4;">
+                    <h2 style="text-align: center; margin: 0;">Recibo de Venta</h2>
+                    <p style="text-align: center; margin: 0;">--------------------------------</p>
+                    <p style="margin: 0;">Fecha: ${sale.timestamp}</p>
+                    <p style="margin: 0;">Venta ID: #${sale.id}</p>
+                    <p style="text-align: center; margin: 0;">--------------------------------</p>
+                    <pre style="margin: 0; white-space: pre-wrap;">${itemsList}</pre>
+                    <p style="text-align: center; margin: 0;">--------------------------------</p>
+                    <pre style="margin: 0; white-space: pre-wrap;">
+Subtotal:          ${'$'.padStart(14, ' ')}${formatCurrency(subtotal)}
+Envío:             ${'$'.padStart(14, ' ')}${formatCurrency(getShippingCost(subtotal))}
+--------------------------------
+<strong>Total:             ${'$'.padStart(14, ' ')}${formatCurrency(sale.total)}</strong>
+--------------------------------
+${paymentDetails}
+                    </pre>
+                    <p style="text-align: center; margin-top: 10px;">¡Gracias por su compra!</p>
                 </div>
             `;
             
-            const printWindow = window.open('', '_blank');
+            const printWindow = window.open('', '_blank', 'width=300,height=500');
             printWindow.document.write(`<html><head><title>Recibo</title></head><body>${printContent}</body></html>`);
             printWindow.document.close();
+            printWindow.focus();
             printWindow.print();
+            printWindow.close();
+        }
+        
+        // Flavor Functions
+        function openFlavorModal(product) {
+            currentProductForFlavor = product;
+            document.getElementById('flavor-modal-icon').textContent = product.icon;
+            document.getElementById('flavor-modal-name').textContent = product.name;
+            document.getElementById('flavor-modal-limit').textContent = `(Elige hasta ${product.maxFlavors} sabor${product.maxFlavors > 1 ? 'es' : ''})`;
+
+            const flavorOptionsContainer = document.getElementById('flavor-options');
+            flavorOptionsContainer.innerHTML = ''; // Clear previous options
+
+            flavors.forEach(flavor => {
+                const label = document.createElement('label');
+                label.className = 'flex items-center space-x-2 bg-gray-700 p-3 rounded-lg cursor-pointer hover:bg-gray-600';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = flavor;
+                checkbox.className = 'form-checkbox h-5 w-5 bg-gray-900 border-gray-600 text-blue-500 focus:ring-blue-500';
+                checkbox.onchange = (event) => handleFlavorSelection(event);
+                
+                const span = document.createElement('span');
+                span.textContent = flavor;
+                
+                label.appendChild(checkbox);
+                label.appendChild(span);
+                flavorOptionsContainer.appendChild(label);
+            });
+            
+            handleFlavorSelection(); // Initial check for button state
+            openModal('flavor-modal');
+        }
+
+        function handleFlavorSelection(event) {
+            const checkboxes = document.querySelectorAll('#flavor-options input[type="checkbox"]');
+            const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+            const confirmBtn = document.getElementById('confirm-flavors-btn');
+
+            if (currentProductForFlavor && checkedCount > currentProductForFlavor.maxFlavors) {
+                if (event && event.target) {
+                    event.target.checked = false;
+                    showNotification(`Solo puedes elegir hasta ${currentProductForFlavor.maxFlavors} sabor${currentProductForFlavor.maxFlavors > 1 ? 'es' : ''}.`, 'warning');
+                }
+            }
+            
+            const newCheckedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+            confirmBtn.disabled = newCheckedCount === 0;
+        }
+        
+        function confirmFlavors() {
+            if (!currentProductForFlavor) return;
+
+            const checkboxes = document.querySelectorAll('#flavor-options input[type="checkbox"]:checked');
+            const selectedFlavors = Array.from(checkboxes).map(cb => cb.value);
+
+            if (selectedFlavors.length === 0) {
+                showNotification('Debes seleccionar al menos un sabor.', 'error');
+                return;
+            }
+
+            const flavoredItem = {
+                ...currentProductForFlavor,
+                name: `${currentProductForFlavor.name} - ${selectedFlavors.join(', ')}`,
+                flavor: selectedFlavors.join(', '),
+            };
+            
+            addToCart(flavoredItem, 1);
+            closeModal('flavor-modal');
         }
 
 
         // Event Listeners
         document.addEventListener('DOMContentLoaded', function() {
+            loadState();
             // Initialize display
             renderProducts();
             updateCartDisplay();
@@ -1723,6 +1879,7 @@
             
             document.getElementById('close-settings').addEventListener('click', () => closeModal('settings-modal'));
             document.getElementById('save-settings').addEventListener('click', saveSettings);
+            document.getElementById('reset-data').addEventListener('click', resetData);
             
             // Checkout modal
             document.getElementById('checkout-btn').addEventListener('click', openCheckout);
@@ -1787,8 +1944,12 @@
             document.getElementById('decrease-quantity').addEventListener('click', decreaseCustomQuantity);
             document.getElementById('custom-quantity-input').addEventListener('input', updateCustomTotal);
             
+            // Flavor Modal
+            document.getElementById('close-flavor-modal').addEventListener('click', () => closeModal('flavor-modal'));
+            document.getElementById('confirm-flavors-btn').addEventListener('click', confirmFlavors);
+
             // Close modals when clicking outside
-            ['settings-modal', 'checkout-modal', 'withdrawals-modal', 'cash-register-modal', 'expenses-modal', 'custom-quantity-modal', 'history-modal', 'sale-detail-modal'].forEach(id => {
+            ['settings-modal', 'checkout-modal', 'withdrawals-modal', 'cash-register-modal', 'expenses-modal', 'custom-quantity-modal', 'history-modal', 'sale-detail-modal', 'flavor-modal'].forEach(id => {
                 document.getElementById(id).addEventListener('click', (e) => {
                     if (e.target === e.currentTarget) closeModal(id);
                 });
@@ -1797,3 +1958,4 @@
     </script>
 </body>
 </html>
+
