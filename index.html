@@ -3,7 +3,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema POS - Punto de Venta</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         
@@ -595,8 +594,8 @@
                 <button id="print-register" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold">
                     🖨️ Imprimir Corte
                 </button>
-                <button id="save-register-pdf" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-semibold">
-                    📄 Guardar PDF
+                <button id="save-register-txt" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-semibold">
+                    📄 Guardar TXT
                 </button>
                 <button id="close-day" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-semibold">
                     🔒 Cerrar Día
@@ -1368,9 +1367,8 @@
             document.getElementById('total-pieces-sold').textContent = totalPiecesSold;
             document.getElementById('average-ticket').textContent = formatCurrency(averageTicket);
         }
-
-        function printCashRegister() {
-            // Re-calculate values for printing
+        
+        function generateRegisterText() {
             const cashSales = state.sales.filter(s => s.paymentMethod === 'cash').reduce((sum, s) => sum + s.total, 0);
             const transferSales = state.sales.filter(s => s.paymentMethod === 'transfer').reduce((sum, s) => sum + s.total, 0);
             const totalSales = cashSales + transferSales;
@@ -1380,13 +1378,11 @@
             const totalPiecesSold = state.sales.reduce((total, sale) => total + sale.pieces, 0);
             const averageTicket = totalTransactions > 0 ? (totalSales / totalTransactions) : 0;
 
-            const printContent = `
-            <div style="width: 58mm; font-family: 'Courier New', monospace; font-size: 10px; line-height: 1.4;">
-                <h2 style="text-align: center; margin: 0;">CORTE DE CAJA</h2>
-                <p style="text-align: center; margin: 0;">================================</p>
-                <p style="margin: 0;">Fecha: ${new Date().toLocaleString()}</p>
-                <p style="text-align: center; margin: 0;">--------------------------------</p>
-                <pre style="margin: 0; white-space: pre-wrap;">
+            return `
+CORTE DE CAJA
+================================
+Fecha: ${new Date().toLocaleString()}
+--------------------------------
 RESUMEN DE CAJA:
 Caja inicial:     $${formatCurrency(state.initialCash).padStart(13)}
 (+) Ventas Efectivo:$${formatCurrency(cashSales).padStart(12)}
@@ -1408,19 +1404,24 @@ RESUMEN DE VENTAS:
 Transacciones:      ${String(totalTransactions).padStart(14)}
 Piezas vendidas:    ${String(totalPiecesSold).padStart(14)}
 Ticket promedio:    $${formatCurrency(averageTicket).padStart(12)}
-                </pre>
-                <p style="text-align: center; margin: 0;">================================</p>
-            </div>
+================================
             `;
-            
+        }
+
+        function printCashRegister() {
+            const printContent = generateRegisterText();
             const printWindow = window.open('', '_blank', 'width=300,height=500');
-            printWindow.document.write(`<html><head><title>Corte de Caja</title></head><body>${printContent}</body></html>`);
+            printWindow.document.write(`<html><head><title>Corte de Caja</title></head><body><pre>${printContent}</pre></body></html>`);
             printWindow.document.close();
             printWindow.focus();
             printWindow.print();
             printWindow.close();
-            
-            showNotification('Corte de caja enviado a impresión');
+        }
+
+        function saveRegisterAsTxt() {
+            const textContent = generateRegisterText();
+            downloadTextFile(`corte_de_caja_${new Date().toISOString().split('T')[0]}.txt`, textContent);
+            showNotification('Corte de caja guardado como TXT.');
         }
 
         function closeDay() {
@@ -1663,9 +1664,8 @@ Ticket promedio:    $${formatCurrency(averageTicket).padStart(12)}
             // Close modal
             closeModal('checkout-modal');
             
-            // Show success message and print receipt
+            // Show success message
             showNotification(`Venta completada por $${formatCurrency(total)}`);
-            printReceipt(sale.id);
         }
         
         // Sales History Functions
@@ -1706,121 +1706,98 @@ Ticket promedio:    $${formatCurrency(averageTicket).padStart(12)}
 
         function renderSaleDetail(sale) {
             const content = document.getElementById('sale-detail-content');
-            const subtotal = sale.total - getShippingCost(sale.total); // Approximate subtotal
             content.innerHTML = `
                 <div class="space-y-4">
-                    <div class="text-center">
-                        <p class="text-gray-400">ID de Venta: ${sale.id}</p>
-                        <p class="text-gray-400">${sale.timestamp}</p>
-                    </div>
-                    <div class="border-t border-b border-gray-600 py-2 space-y-2">
-                        ${sale.items.map(item => `
-                            <div class="flex justify-between text-sm">
-                                <span>${item.icon} ${item.name} (x${item.quantity})</span>
-                                <span>$${formatCurrency(item.price * item.quantity)}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <div class="space-y-1">
-                        <div class="flex justify-between"><span>Subtotal:</span><span>$${formatCurrency(subtotal)}</span></div>
-                        <div class="flex justify-between"><span>Envío:</span><span>$${formatCurrency(getShippingCost(subtotal))}</span></div>
-                        <div class="flex justify-between font-bold text-lg"><span class="text-green-400">Total:</span><span class="text-green-400">$${formatCurrency(sale.total)}</span></div>
-                    </div>
-                     <div class="border-t border-gray-600 pt-2 space-y-1">
-                        <div class="flex justify-between">
-                            <span>Método de Pago:</span>
-                            <span class="font-semibold">${sale.paymentMethod === 'cash' ? '💵 Efectivo' : '💳 Transferencia'}</span>
+                    <div id="receipt-content-${sale.id}">
+                        <div class="text-center">
+                            <p class="text-gray-400">ID de Venta: ${sale.id}</p>
+                            <p class="text-gray-400">${sale.timestamp}</p>
                         </div>
-                        ${sale.paymentMethod === 'cash' ? `
-                        <div class="flex justify-between"><span>Efectivo Recibido:</span><span>$${formatCurrency(sale.cashReceived)}</span></div>
-                        <div class="flex justify-between"><span>Cambio:</span><span>$${formatCurrency(sale.change)}</span></div>
-                        ` : ''}
+                        <div class="border-t border-b border-gray-600 py-2 space-y-2">
+                            ${sale.items.map(item => `
+                                <div class="flex justify-between text-sm">
+                                    <span>${item.icon} ${item.name} (x${item.quantity})</span>
+                                    <span>$${formatCurrency(item.price * item.quantity)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex justify-between"><span>Subtotal:</span><span>$${formatCurrency(sale.total - getShippingCost(sale.total))}</span></div>
+                            <div class="flex justify-between"><span>Envío:</span><span>$${formatCurrency(getShippingCost(sale.total))}</span></div>
+                            <div class="flex justify-between font-bold text-lg"><span class="text-green-400">Total:</span><span class="text-green-400">$${formatCurrency(sale.total)}</span></div>
+                        </div>
+                        <div class="border-t border-gray-600 pt-2 space-y-1">
+                            <div class="flex justify-between">
+                                <span>Método de Pago:</span>
+                                <span class="font-semibold">${sale.paymentMethod === 'cash' ? '💵 Efectivo' : '💳 Transferencia'}</span>
+                            </div>
+                            ${sale.paymentMethod === 'cash' ? `
+                            <div class="flex justify-between"><span>Efectivo Recibido:</span><span>$${formatCurrency(sale.cashReceived)}</span></div>
+                            <div class="flex justify-between"><span>Cambio:</span><span>$${formatCurrency(sale.change)}</span></div>
+                            ` : ''}
+                        </div>
                     </div>
                     <div class="flex space-x-2">
                         <button onclick="printReceipt(${sale.id})" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold">
                             🖨️ Imprimir
                         </button>
-                        <button onclick="saveReceiptAsPdf(${sale.id})" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-semibold">
-                            📄 Guardar PDF
+                        <button onclick="saveReceiptAsTxt(${sale.id})" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-semibold">
+                            📄 Guardar TXT
                         </button>
                     </div>
                 </div>
             `;
         }
         
-        function generateReceiptHTML(sale) {
+        function generateReceiptText(sale) {
             const subtotal = sale.total - getShippingCost(sale.total);
             let itemsList = '';
             sale.items.forEach(item => {
                 const itemTotal = formatCurrency(item.price * item.quantity);
                 let itemName = `${item.quantity}x ${item.name}`;
-                if (itemName.length > 20) {
-                    itemName = itemName.substring(0, 17) + '...';
-                }
-                const spaces = ' '.repeat(32 - itemName.length - itemTotal.length - 1);
+                const spaces = ' '.repeat(Math.max(0, 32 - itemName.length - itemTotal.length - 1));
                 itemsList += `${itemName}${spaces}$${itemTotal}\n`;
             });
 
-            const paymentDetails = sale.paymentMethod === 'cash' ? `
-                Efectivo Recibido: ${'$'.padStart(14, ' ')}${formatCurrency(sale.cashReceived)}
-                Cambio:            ${'$'.padStart(14, ' ')}${formatCurrency(sale.change)}
-            ` : `
-                Pagado con:           Transferencia
-            `;
+            const paymentDetails = sale.paymentMethod === 'cash' ?
+`Efectivo Recibido: ${'$'.padStart(14, ' ')}${formatCurrency(sale.cashReceived)}
+Cambio:            ${'$'.padStart(14, ' ')}${formatCurrency(sale.change)}`
+            :
+`Pagado con:           Transferencia`;
 
-            return `
-                <div style="width: 58mm; font-family: 'Courier New', monospace; font-size: 10px; line-height: 1.4;">
-                    <h2 style="text-align: center; margin: 0;">Recibo de Venta</h2>
-                    <p style="text-align: center; margin: 0;">--------------------------------</p>
-                    <p style="margin: 0;">Fecha: ${sale.timestamp}</p>
-                    <p style="margin: 0;">Venta ID: #${sale.id}</p>
-                    <p style="text-align: center; margin: 0;">--------------------------------</p>
-                    <pre style="margin: 0; white-space: pre-wrap;">${itemsList}</pre>
-                    <p style="text-align: center; margin: 0;">--------------------------------</p>
-                    <pre style="margin: 0; white-space: pre-wrap;">
-Subtotal:          ${'$'.padStart(14, ' ')}${formatCurrency(subtotal)}
-Envío:             ${'$'.padStart(14, ' ')}${formatCurrency(getShippingCost(subtotal))}
---------------------------------
-<strong>Total:             ${'$'.padStart(14, ' ')}${formatCurrency(sale.total)}</strong>
---------------------------------
-${paymentDetails}
-                    </pre>
-                    <p style="text-align: center; margin-top: 10px;">¡Gracias por su compra!</p>
-                </div>
-            `;
+            return `Recibo de Venta\n================================\nFecha: ${sale.timestamp}\nVenta ID: #${sale.id}\n--------------------------------\n${itemsList}--------------------------------\nSubtotal:          ${'$'.padStart(14, ' ')}${formatCurrency(subtotal)}\nEnvío:             ${'$'.padStart(14, ' ')}${formatCurrency(getShippingCost(subtotal))}\n--------------------------------\nTotal:             ${'$'.padStart(14, ' ')}${formatCurrency(sale.total)}\n--------------------------------\n${paymentDetails}\n--------------------------------\n¡Gracias por su compra!`;
         }
         
+        function saveReceiptAsTxt(saleId) {
+            const sale = state.sales.find(s => s.id === saleId);
+            if (!sale) return;
+            const textContent = generateReceiptText(sale);
+            downloadTextFile(`recibo_${sale.id}.txt`, textContent);
+            showNotification('Recibo guardado como TXT.');
+        }
+
+        function downloadTextFile(filename, text) {
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            element.setAttribute('download', filename);
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+        }
+
         function printReceipt(saleId) {
             const sale = state.sales.find(s => s.id === saleId);
             if (!sale) return;
-            const printContent = generateReceiptHTML(sale);
-            
+
+            const textContent = generateReceiptText(sale);
+
             const printWindow = window.open('', '_blank', 'width=300,height=500');
-            printWindow.document.write(`<html><head><title>Recibo</title></head><body>${printContent}</body></html>`);
+            printWindow.document.write(`<html><head><title>Recibo</title></head><body><pre style="font-family: 'Courier New', monospace; font-size: 10px; margin: 0;">${textContent}</pre></body></html>`);
             printWindow.document.close();
             printWindow.focus();
             printWindow.print();
             printWindow.close();
-        }
-
-        function saveReceiptAsPdf(saleId) {
-            const sale = state.sales.find(s => s.id === saleId);
-            if (!sale) return;
-            const printContent = generateReceiptHTML(sale);
-            
-            const element = document.createElement('div');
-            element.innerHTML = printContent;
-            
-            const opt = {
-              margin:       [5, 2, 5, 2], // top, left, bottom, right in mm
-              filename:     `recibo_${sale.id}.pdf`,
-              image:        { type: 'jpeg', quality: 0.98 },
-              html2canvas:  { scale: 2, logging: false },
-              jsPDF:        { unit: 'mm', format: [58, 200], orientation: 'portrait' }
-            };
-
-            html2pdf().set(opt).from(element).save();
-            showNotification('Recibo guardado como PDF.');
         }
         
         // Flavor Functions
@@ -1946,6 +1923,12 @@ ${paymentDetails}
             
             document.getElementById('close-cash-register').addEventListener('click', () => closeModal('cash-register-modal'));
             document.getElementById('print-register').addEventListener('click', printCashRegister);
+            
+            const saveRegisterBtn = document.getElementById('save-register-txt');
+            if (saveRegisterBtn) {
+                 saveRegisterBtn.addEventListener('click', saveRegisterAsTxt);
+            }
+           
             document.getElementById('close-day').addEventListener('click', closeDay);
             
             // Expenses modal
